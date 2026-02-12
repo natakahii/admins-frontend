@@ -1,18 +1,15 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from "react";
+import { RouterProvider } from "react-router-dom";
+import { router } from "./app/router.jsx";
+import { AuthProvider } from "./app/providers/AuthProvider.jsx";
+import QueryProvider from "./app/providers/QueryProvider.jsx";
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
-    <>
-   
-    <h1>Adminstrative Access Point</h1>
-    
-    </>
-  )
+    <QueryProvider>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </QueryProvider>
+  );
 }
-
-export default App
