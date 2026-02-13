@@ -4,6 +4,31 @@ export function getAdminRoleFromUser(user) {
   // Common shapes from /api/v1/auth/me
   // user.role, user.admin_role, user.user_type
   const u = user?.user || user?.data?.user || user?.data || user;
+
+  const roles = u?.roles || user?.roles;
+  if (Array.isArray(roles) && roles.length > 0) {
+    const normalizedRoles = roles
+      .map((r) => {
+        if (!r) return null;
+        if (typeof r === "string") return r;
+        return r?.name || r?.role || r?.slug || r?.type || null;
+      })
+      .filter(Boolean)
+      .map((r) =>
+        String(r)
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "_")
+          .replace(/-+/g, "_")
+      );
+
+    if (normalizedRoles.includes("super_admin")) return "super_admin";
+    if (normalizedRoles.includes("superadmin")) return "super_admin";
+    if (normalizedRoles.includes("super")) return "super_admin";
+    if (normalizedRoles.includes("normal_admin")) return "normal_admin";
+    if (normalizedRoles.includes("normaladmin")) return "normal_admin";
+    if (normalizedRoles.includes("admin")) return "normal_admin";
+  }
   const role =
     u?.admin_role ||
     u?.role ||
