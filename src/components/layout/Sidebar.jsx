@@ -1,16 +1,18 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import Icon from "./icons/Icon.jsx";
+import logoImg from "../../assets/logo/logo.png";
 
 export default function Sidebar({ nav = [], open = false, onClose, onNavigate }) {
   return (
     <aside className={`sidebar ${open ? "sidebar--open" : ""}`}>
       <div className="sidebar__top">
         <div className="brand">
-          <div className="brand__mark">N</div>
+          <div className="brand__mark">
+            <img src={logoImg} alt="NatakaHii" className="brand__logo" />
+          </div>
           <div className="brand__text">
-            <div className="brand__name">NatakaHii</div>
-            <div className="brand__sub">Admin Console</div>
+            <div className="brand__name">natakahii</div>
           </div>
         </div>
 
@@ -39,7 +41,7 @@ export default function Sidebar({ nav = [], open = false, onClose, onNavigate })
       </nav>
 
       <div className="sidebar__footer">
-        <div className="muted">© {new Date().getFullYear()} NatakaHii</div>
+        <div className="muted">© {new Date().getFullYear()} natakahii</div>
       </div>
     </aside>
   );

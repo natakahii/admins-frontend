@@ -119,7 +119,7 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
           </div>
         }
       >
-        <div className="muted">Are you sure you want to sign out of the admin console?</div>
+        <div className="muted">Are you sure you want to sign out?</div>
       </Modal>
     </header>
   );
