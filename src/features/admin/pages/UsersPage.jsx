@@ -36,6 +36,7 @@ export default function UsersPage() {
   const [newStatus, setNewStatus] = useState("active");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
 
   const [toast, setToast] = useState({ open: false, tone: "info", message: "" });
 
@@ -49,9 +50,11 @@ export default function UsersPage() {
   async function saveStatus() {
     if (!selected?.id) return;
     setSaving(true);
+    setStatusMessage("");
     try {
       await adminApi.updateUserStatus(selected.id, { status: newStatus, reason });
       setToast({ open: true, tone: "success", message: "User status updated." });
+      setStatusMessage("User status updated.");
       setOpen(false);
       reload();
     } catch (e) {
@@ -91,6 +94,7 @@ export default function UsersPage() {
 
       <Card title="Users List" subtitle="Admin: GET /api/v1/admin/users">
         {loading ? <Loader label="Loading users..." /> : null}
+        {statusMessage ? <div className="alert alert--success">{statusMessage}</div> : null}
         {error ? <div className="alert alert--danger">{error}</div> : null}
 
         <Table
