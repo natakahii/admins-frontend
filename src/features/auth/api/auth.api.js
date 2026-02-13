@@ -30,11 +30,11 @@ export const authApi = {
     return res.data;
   },
   async getProfile() {
-    const res = await api.get("/api/v1/auth/profile");
+    const res = await api.get("/api/v1/auth/me");
     return res.data;
   },
   async updateProfile(payload) {
-    const res = await api.patch("/api/v1/auth/profile", payload);
+    const res = await api.patch("/api/v1/profile", payload);
     return res.data;
   },
   async uploadProfilePicture(payload) {
