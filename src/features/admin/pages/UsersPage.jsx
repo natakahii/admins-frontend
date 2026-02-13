@@ -6,7 +6,6 @@ import Input from "../../../components/ui/Input.jsx";
 import Select from "../../../components/ui/Select.jsx";
 import Button from "../../../components/ui/Button.jsx";
 import Modal from "../../../components/ui/Modal.jsx";
-import Toast from "../../../components/feedback/Toast.jsx";
 import Badge from "../../../components/ui/Badge.jsx";
 import Loader from "../../../components/ui/Loader.jsx";
 import { useListResource } from "../../shared/hooks/useListResource.js";
@@ -36,9 +35,9 @@ export default function UsersPage() {
   const [newStatus, setNewStatus] = useState("active");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("");
 
   const [toast, setToast] = useState({ open: false, tone: "info", message: "" });
+  const [statusBanner, setStatusBanner] = useState("");
 
   function openStatusModal(row) {
     setSelected(row);
@@ -50,11 +49,10 @@ export default function UsersPage() {
   async function saveStatus() {
     if (!selected?.id) return;
     setSaving(true);
-    setStatusMessage("");
     try {
       await adminApi.updateUserStatus(selected.id, { status: newStatus, reason });
       setToast({ open: true, tone: "success", message: "User status updated." });
-      setStatusMessage("User status updated.");
+      setStatusBanner("User status updated.");
       setOpen(false);
       reload();
     } catch (e) {
@@ -94,7 +92,9 @@ export default function UsersPage() {
 
       <Card title="Users List" subtitle="Admin: GET /api/v1/admin/users">
         {loading ? <Loader label="Loading users..." /> : null}
-        {statusMessage ? <div className="alert alert--success">{statusMessage}</div> : null}
+        {statusBanner ? (
+          <div className="alert alert--success">{statusBanner}</div>
+        ) : null}
         {error ? <div className="alert alert--danger">{error}</div> : null}
 
         <Table
