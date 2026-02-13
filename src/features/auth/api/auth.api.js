@@ -34,7 +34,7 @@ export const authApi = {
     return res.data;
   },
   async updateProfile(payload) {
-    const res = await api.put("/api/v1/profile", payload);
+    const res = await api.patch("/api/v1/profile", payload);
     return res.data;
   },
   async uploadProfilePicture(payload) {
