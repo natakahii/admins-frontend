@@ -1,6 +1,8 @@
 import React from "react";
 
 const icons = {
+  menu: "≡",
+  x: "✕",
   grid: "▦",
   users: "👥",
   store: "🏪",

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import Topbar from "./Topbar.jsx";
@@ -9,6 +9,30 @@ import { useAuth } from "../../app/providers/authContext.js";
 export default function AppLayout() {
   const { adminRole } = useAuth();
   const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setSidebarOpen(false);
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (sidebarOpen) document.body.classList.add("isSidebarOpen");
+    else document.body.classList.remove("isSidebarOpen");
+    return () => document.body.classList.remove("isSidebarOpen");
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    function onKeyDown(e) {
+      if (e.key === "Escape") setSidebarOpen(false);
+    }
+
+    if (!sidebarOpen) return;
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [sidebarOpen]);
 
   const nav = useMemo(() => {
     const base = [...adminNav];
@@ -26,9 +50,23 @@ export default function AppLayout() {
 
   return (
     <div className="shell">
-      <Sidebar nav={nav} />
+      <div
+        className={`sidebarOverlay ${sidebarOpen ? "sidebarOverlay--open" : ""}`}
+        onClick={() => setSidebarOpen(false)}
+        aria-hidden={!sidebarOpen}
+      />
+      <Sidebar
+        nav={nav}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onNavigate={() => setSidebarOpen(false)}
+      />
       <div className="shell__main">
-        <Topbar sectionTitle={sectionTitle} />
+        <Topbar
+          sectionTitle={sectionTitle}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen((o) => !o)}
+        />
         <div className="shell__content">
           <Outlet />
         </div>

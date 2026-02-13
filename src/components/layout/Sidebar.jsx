@@ -2,15 +2,21 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import Icon from "./icons/Icon.jsx";
 
-export default function Sidebar({ nav = [] }) {
+export default function Sidebar({ nav = [], open = false, onClose, onNavigate }) {
   return (
-    <aside className="sidebar">
-      <div className="brand">
-        <div className="brand__mark">N</div>
-        <div className="brand__text">
-          <div className="brand__name">NatakaHii</div>
-          <div className="brand__sub">Admin Console</div>
+    <aside className={`sidebar ${open ? "sidebar--open" : ""}`}>
+      <div className="sidebar__top">
+        <div className="brand">
+          <div className="brand__mark">N</div>
+          <div className="brand__text">
+            <div className="brand__name">NatakaHii</div>
+            <div className="brand__sub">Admin Console</div>
+          </div>
         </div>
+
+        <button type="button" className="sidebar__close" onClick={onClose} aria-label="Close navigation">
+          <Icon name="x" />
+        </button>
       </div>
 
       <nav className="nav">
@@ -23,6 +29,7 @@ export default function Sidebar({ nav = [] }) {
               key={item.path}
               to={item.path}
               className={({ isActive }) => `nav__link ${isActive ? "nav__link--active" : ""}`}
+              onClick={onNavigate}
             >
               <Icon name={item.icon} />
               <span>{item.label}</span>

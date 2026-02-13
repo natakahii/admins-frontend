@@ -6,7 +6,7 @@ import Icon from "./icons/Icon.jsx";
 import { useAuth } from "../../app/providers/authContext.js";
 import { useNavigate } from "react-router-dom";
 
-export default function Topbar({ sectionTitle }) {
+export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSidebar }) {
   const { user, adminRole, logout } = useAuth();
   const navigate = useNavigate();
   const menuRef = useRef(null);
@@ -43,9 +43,21 @@ export default function Topbar({ sectionTitle }) {
 
   return (
     <header className="topbar">
-      <div>
-        <div className="topbar__title">{sectionTitle}</div>
-        <div className="topbar__subtitle">Manage operations, vendors, content and platform settings</div>
+      <div className="topbar__left">
+        <button
+          type="button"
+          className="topbar__navToggle"
+          onClick={onToggleSidebar}
+          aria-label={sidebarOpen ? "Close navigation" : "Open navigation"}
+          aria-expanded={sidebarOpen}
+        >
+          <Icon name={sidebarOpen ? "x" : "menu"} />
+        </button>
+
+        <div className="topbar__titles">
+          <div className="topbar__title">{sectionTitle}</div>
+          <div className="topbar__subtitle">Manage operations, vendors, content and platform settings</div>
+        </div>
       </div>
 
       <div className="topbar__right" ref={menuRef}>
