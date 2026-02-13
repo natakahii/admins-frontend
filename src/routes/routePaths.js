@@ -14,7 +14,7 @@ export const ROUTE_PATHS = Object.freeze({
   // Common protected
   APP: "/app",
   DASHBOARD: "/app/dashboard",
-  PROFILE: "/app/profile", // optional
+  PROFILE: "/app/profile", 
 
   // Normal Admin (Operational)
   ADMIN: "/app/admin",

@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { authApi } from "../../features/auth/api/auth.api.js";
-import { clearAuthStorage, getToken, setToken, setUser, getUser } from "../../services/storage.js";
+import { clearAuthStorage, getToken, setToken, setUser as persistUser, getUser, clearUser } from "../../services/storage.js";
 import { getAdminRoleFromUser } from "../../utils/constants.js";
 import { AuthContext } from "./authContext.js";
 
@@ -9,6 +9,17 @@ export function AuthProvider({ children }) {
   const [token, setTokenState] = useState(getToken());
   const [user, setUserState] = useState(getUser());
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(getToken()));
+
+  const updateUserState = useCallback((rawUser) => {
+    const normalized = rawUser?.user || rawUser || null;
+    if (normalized) {
+      persistUser(normalized);
+    } else {
+      clearUser();
+    }
+    setUserState(normalized);
+    return normalized;
+  }, []);
 
   useEffect(() => {
     async function bootstrap() {
@@ -19,8 +30,7 @@ export function AuthProvider({ children }) {
       }
       try {
         const me = await authApi.me();
-        setUser(me?.user || me); // depends on backend response shape
-        setUserState(me?.user || me);
+        updateUserState(me);
         setIsAuthenticated(true);
       } catch {
         clearAuthStorage();
@@ -33,9 +43,9 @@ export function AuthProvider({ children }) {
     }
 
     bootstrap();
-  }, []);
+  }, [updateUserState]);
 
-  async function login({ email_or_phone, password, device_name }) {
+  const login = useCallback(async ({ email_or_phone, password, device_name }) => {
     const identifier = String(email_or_phone || "").trim();
     const res = await authApi.login({
       email: identifier,
@@ -51,14 +61,13 @@ export function AuthProvider({ children }) {
 
     // Fetch me
     const me = await authApi.me();
-    setUser(me?.user || me);
-    setUserState(me?.user || me);
+    updateUserState(me);
     setIsAuthenticated(true);
 
     return me?.user || me;
-  }
+  }, [updateUserState]);
 
-  async function logout() {
+  const logout = useCallback(async () => {
     try {
       await authApi.logout();
     } catch {
@@ -69,7 +78,12 @@ export function AuthProvider({ children }) {
       setUserState(null);
       setIsAuthenticated(false);
     }
-  }
+  }, []);
+
+  const refreshProfile = useCallback(async () => {
+    const profile = await authApi.getProfile();
+    return updateUserState(profile);
+  }, [updateUserState]);
 
   const adminRole = useMemo(() => getAdminRoleFromUser(user), [user]);
 
@@ -81,9 +95,11 @@ export function AuthProvider({ children }) {
       adminRole,
       isAuthenticated,
       login,
-      logout
+      logout,
+      refreshProfile,
+      updateUser: updateUserState
     }),
-    [loading, token, user, adminRole, isAuthenticated]
+    [loading, token, user, adminRole, isAuthenticated, login, logout, refreshProfile, updateUserState]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -20,9 +20,11 @@ export default function Modal({ open, title, children, onClose, footer, classNam
           <Button variant="ghost" onClick={onClose} aria-label="Close">✕</Button>
         </div>
         <div className="modal__body">{children}</div>
-        <div className="modal__footer">
-          {footer ? footer : <Button variant="secondary" onClick={onClose}>Close</Button>}
-        </div>
+        {footer === null ? null : (
+          <div className="modal__footer">
+            {footer ? footer : <Button variant="secondary" onClick={onClose}>Close</Button>}
+          </div>
+        )}
       </div>
     </div>
   );

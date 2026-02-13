@@ -4,6 +4,7 @@ const icons = {
   menu: "≡",
   x: "✕",
   grid: "▦",
+  user: "👤",
   users: "👥",
   store: "🏪",
   box: "📦",

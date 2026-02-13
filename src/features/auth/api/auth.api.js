@@ -28,5 +28,21 @@ export const authApi = {
   async resendOtp(payload) {
     const res = await api.post("/api/v1/auth/resend-otp", payload);
     return res.data;
+  },
+  async getProfile() {
+    const res = await api.get("/api/v1/profile");
+    return res.data;
+  },
+  async updateProfile(payload) {
+    const res = await api.put("/api/v1/profile", payload);
+    return res.data;
+  },
+  async uploadProfilePicture(payload) {
+    const res = await api.post("/api/v1/profile/photo", payload);
+    return res.data;
+  },
+  async deleteProfilePicture() {
+    const res = await api.delete("/api/v1/profile/photo");
+    return res.data;
   }
 };
