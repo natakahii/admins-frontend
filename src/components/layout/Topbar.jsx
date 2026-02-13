@@ -8,20 +8,35 @@ import { authApi } from "../../features/auth/api/auth.api.js";
 import { useAuth } from "../../app/providers/authContext.js";
 import { useNavigate } from "react-router-dom";
 
+const MAX_PHOTO_MB = 2;
+const MAX_PHOTO_BYTES = MAX_PHOTO_MB * 1024 * 1024;
+
 export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSidebar }) {
   const { user, adminRole, logout, refreshProfile } = useAuth();
   const navigate = useNavigate();
+
   const menuRef = useRef(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [profileForm, setProfileForm] = useState({ name: user?.name || "", phone: user?.phone || "" });
-  const [profileSaving, setProfileSaving] = useState(false);
-  const [profileStatus, setProfileStatus] = useState(null);
-  const [photoUploading, setPhotoUploading] = useState(false);
-  const [photoRemoving, setPhotoRemoving] = useState(false);
   const fileInputRef = useRef(null);
 
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const [profileForm, setProfileForm] = useState({
+    name: user?.name || "",
+    phone: user?.phone || "",
+  });
+
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileStatus, setProfileStatus] = useState(null);
+
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoRemoving, setPhotoRemoving] = useState(false);
+
+  // Close menu on outside click
   useEffect(() => {
     function onClickOutside(e) {
       if (!menuOpen) return;
@@ -29,37 +44,87 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
       if (menuRef.current.contains(e.target)) return;
       setMenuOpen(false);
     }
-
     window.addEventListener("mousedown", onClickOutside);
     return () => window.removeEventListener("mousedown", onClickOutside);
   }, [menuOpen]);
 
+  // Escape key: close menu / modals
   useEffect(() => {
-    if (!accountOpen) return;
+    function onKeyDown(e) {
+      if (e.key !== "Escape") return;
+      if (menuOpen) setMenuOpen(false);
+      if (profileOpen && canCloseProfile) setProfileOpen(false);
+      if (logoutOpen && !loggingOut) setLogoutOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen, profileOpen, logoutOpen, loggingOut]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When profile modal opens: sync form
+  useEffect(() => {
+    if (!profileOpen) return;
     setProfileForm({ name: user?.name || "", phone: user?.phone || "" });
     setProfileStatus(null);
-  }, [accountOpen, user]);
+  }, [profileOpen, user]);
+
+  const avatarSrc = user?.profile_photo;
+  const displayName = user?.name || "Admin";
+  const displayMeta = user?.email || user?.phone || "";
+  const initial = (displayName?.trim()?.[0] || "A").toUpperCase();
+
+  const tone = adminRole === "super_admin" ? "warning" : "primary";
+
+  const canCloseProfile = !(profileSaving || photoUploading || photoRemoving);
+
+  function openProfile() {
+    setMenuOpen(false);
+    setProfileStatus(null);
+    setProfileOpen(true);
+  }
+
+  function openLogoutConfirm() {
+    setMenuOpen(false);
+    setLogoutOpen(true);
+  }
+
+  function closeProfileModal() {
+    if (!canCloseProfile) return;
+    setProfileOpen(false);
+  }
+
+  function closeLogoutModal() {
+    if (loggingOut) return;
+    setLogoutOpen(false);
+  }
 
   async function handleConfirmLogout() {
     if (loggingOut) return;
     setLoggingOut(true);
     try {
       await logout();
+    } catch (e) {
+      // even if backend fails, remove UI session and route to login
     } finally {
+      setLogoutOpen(false);
+      setProfileOpen(false);
       navigate("/", { replace: true });
+      setLoggingOut(false);
     }
   }
 
   async function handleSaveProfile(e) {
     e.preventDefault();
     if (profileSaving) return;
+
     setProfileStatus(null);
     setProfileSaving(true);
+
     try {
       await authApi.updateProfile({
         name: profileForm.name?.trim(),
-        phone: profileForm.phone?.trim() || null
+        phone: profileForm.phone?.trim() || null,
       });
+
       await refreshProfile?.();
       setProfileStatus({ type: "success", message: "Profile updated." });
     } catch (err) {
@@ -72,13 +137,29 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
 
   async function handleUploadPhoto(file) {
     if (!file) return;
+
+    // validate
+    if (!file.type?.startsWith("image/")) {
+      setProfileStatus({ type: "error", message: "Please choose an image file (PNG/JPG/WebP)." });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setProfileStatus({ type: "error", message: `Image too large. Max ${MAX_PHOTO_MB}MB.` });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     setProfileStatus(null);
     setPhotoUploading(true);
+
     try {
       const formData = new FormData();
       formData.append("photo", file);
+
       await authApi.uploadProfilePicture(formData);
       await refreshProfile?.();
+
       setProfileStatus({ type: "success", message: "Profile photo updated." });
     } catch (err) {
       const message = err?.response?.data?.message || err?.message || "Failed to upload photo.";
@@ -91,8 +172,10 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
 
   async function handleRemovePhoto() {
     if (photoRemoving) return;
+
     setProfileStatus(null);
     setPhotoRemoving(true);
+
     try {
       await authApi.deleteProfilePicture();
       await refreshProfile?.();
@@ -103,19 +186,6 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
     } finally {
       setPhotoRemoving(false);
     }
-  }
-
-  const avatarSrc = user?.profile_photo;
-  const tone = adminRole === "super_admin" ? "warning" : "primary";
-  const displayName = user?.name || "Admin";
-  const displayMeta = user?.email || user?.phone || "";
-  const initial = (displayName?.trim()?.[0] || "A").toUpperCase();
-
-  const canCloseAccount = !(profileSaving || photoUploading || photoRemoving || loggingOut);
-
-  function closeAccountModal() {
-    if (!canCloseAccount) return;
-    setAccountOpen(false);
   }
 
   return (
@@ -148,60 +218,44 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
           aria-expanded={menuOpen}
         >
           <span className="topbar__avatar" aria-hidden>
-            {initial}
+            {avatarSrc ? <img src={avatarSrc} alt="" /> : initial}
           </span>
+
           <span className="topbar__user">
             <span className="topbar__userName">{displayName}</span>
             <span className="topbar__userMeta">{displayMeta}</span>
           </span>
+
           <span className="topbar__chev" aria-hidden>
             ▾
           </span>
         </button>
 
         {menuOpen ? (
-          <div className="topbar__menu" role="menu">
-            <button
-              type="button"
-              className="topbar__menuItem"
-              role="menuitem"
-              onClick={() => {
-                setMenuOpen(false);
-                setAccountOpen(true);
-              }}
-            >
+          <div className="topbar__menu" role="menu" aria-label="Account menu">
+            <button type="button" className="topbar__menuItem" role="menuitem" onClick={openProfile}>
               <Icon name="user" />
-              Profile & Logout
+              Profile
             </button>
-            <button
-              type="button"
-              className="topbar__menuItem"
-              role="menuitem"
-              onClick={() => {
-                setMenuOpen(false);
-                setAccountOpen(true);
-              }}
-            >
-              <Icon name="rotate-ccw" />
+
+            <button type="button" className="topbar__menuItem" role="menuitem" onClick={openLogoutConfirm}>
+              <Icon name="log-out" />
               Logout
             </button>
           </div>
         ) : null}
       </div>
 
-      <Modal
-        open={accountOpen}
-        title="Account"
-        onClose={closeAccountModal}
-        footer={null}
-        className="profileModal"
-      >
+      {/* PROFILE MODAL */}
+      <Modal open={profileOpen} title="My Profile" onClose={closeProfileModal} footer={null} className="profileModal">
         <div className="profileModal__section">
           <div className="profileModal__avatar" aria-hidden>
             {avatarSrc ? <img src={avatarSrc} alt={`${displayName} avatar`} /> : <span>{initial}</span>}
           </div>
+
           <div className="profileModal__photoActions">
             <div className="muted">Update your profile photo</div>
+
             <div className="row gap-sm">
               <Button
                 type="button"
@@ -211,6 +265,7 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
               >
                 Upload photo
               </Button>
+
               <Button
                 type="button"
                 variant="ghost"
@@ -221,6 +276,7 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
                 Remove
               </Button>
             </div>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -228,7 +284,8 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
               style={{ display: "none" }}
               onChange={(e) => handleUploadPhoto(e.target.files?.[0])}
             />
-            <div className="profileModal__hint">PNG or JPG, max 2MB.</div>
+
+            <div className="profileModal__hint">PNG/JPG/WebP, max {MAX_PHOTO_MB}MB.</div>
           </div>
         </div>
 
@@ -247,6 +304,7 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
             onChange={(e) => setProfileForm((prev) => ({ ...prev, phone: e.target.value }))}
           />
           <Input label="Email" value={user?.email || ""} readOnly disabled />
+
           <div className="row rowEnd gap-sm profileModal__actions">
             <Button
               type="button"
@@ -256,6 +314,7 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
             >
               Reset
             </Button>
+
             <Button type="submit" variant="primary" loading={profileSaving}>
               Save changes
             </Button>
@@ -267,14 +326,16 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
             {profileStatus.message}
           </div>
         ) : null}
+      </Modal>
 
-        <div className="profileModal__section profileModal__logout">
-          <div>
-            <div className="profileModal__logoutTitle">Logout</div>
-            <div className="muted">Are you sure you want to sign out?</div>
-          </div>
-          <div className="row gap-sm">
-            <Button type="button" variant="secondary" onClick={closeAccountModal} disabled={!canCloseAccount}>
+      {/* LOGOUT CONFIRM MODAL */}
+      <Modal open={logoutOpen} title="Logout" onClose={closeLogoutModal} footer={null} className="logoutModal">
+        <div className="logoutModal__body">
+          <div className="logoutModal__title">Sign out of your account?</div>
+          <div className="muted">You’ll be redirected to the login page.</div>
+
+          <div className="row rowEnd gap-sm" style={{ marginTop: 16 }}>
+            <Button type="button" variant="secondary" onClick={closeLogoutModal} disabled={loggingOut}>
               Cancel
             </Button>
             <Button type="button" variant="primary" onClick={handleConfirmLogout} loading={loggingOut}>
