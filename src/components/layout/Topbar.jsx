@@ -218,7 +218,7 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
           aria-expanded={menuOpen}
         >
           <span className="topbar__avatar" aria-hidden>
-            {avatarSrc ? <img src={avatarSrc} alt="" /> : initial}
+            {avatarSrc ? <img src={avatarSrc} alt="Profile" /> : initial}
           </span>
 
           <span className="topbar__user">
