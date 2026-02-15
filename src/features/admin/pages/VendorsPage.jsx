@@ -12,17 +12,8 @@ import Loader from "../../../components/ui/Loader.jsx";
 import Textarea from "../../../components/ui/Textarea.jsx";
 import { useListResource } from "../../shared/hooks/useListResource.js";
 import { adminApi } from "../api/admin.api.js";
-import { authApi } from "../../auth/api/auth.api.js";
 import { vendorApi } from "../../vendor/api/vendor.api.js";
 import { safeText } from "../../../utils/formatters.js";
-
-const accountDefaults = {
-  name: "",
-  email: "",
-  phone: "",
-  password: "",
-  role: ""
-};
 
 const profileDefaults = {
   shop_name: "",
@@ -39,23 +30,9 @@ function slugify(value = "") {
     .replace(/(^-|-$)+/g, "");
 }
 
-const allowedVendorRoles = ["customer", "individual_vendor", "business_vendor"];
-
-function normalizeRoleValue(value = "") {
-  return value
-    .toString()
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/-+/g, "_");
-}
-
-function formatRoleLabel(slug = "") {
-  if (!slug) return "";
-  return slug
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+function getVendorIdentifier(vendor) {
+  if (!vendor) return "";
+  return String(vendor.user_id ?? vendor.id ?? "");
 }
 
 export default function VendorsPage() {
@@ -84,69 +61,66 @@ export default function VendorsPage() {
 
   const [toast, setToast] = useState({ open: false, tone: "info", message: "" });
 
-  const [roleOptions, setRoleOptions] = useState([]);
-  const [rolesLoading, setRolesLoading] = useState(false);
-  const [rolesError, setRolesError] = useState("");
-
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createStatus, setCreateStatus] = useState(null);
-  const [accountForm, setAccountForm] = useState(accountDefaults);
   const [profileForm, setProfileForm] = useState(profileDefaults);
   const [slugTouched, setSlugTouched] = useState(false);
+  const [selectedVendorId, setSelectedVendorId] = useState("");
+  const [selectionName, setSelectionName] = useState("");
+  const [selectionEmail, setSelectionEmail] = useState("");
+  const [selectionType, setSelectionType] = useState("");
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
   const logoInputRef = useRef(null);
+
+  const vendors = Array.isArray(data) ? data : [];
+
+  const vendorTypeOptions = useMemo(() => {
+    const set = new Set();
+    vendors.forEach((vendor) => {
+      if (vendor?.vendor_type) set.add(vendor.vendor_type);
+    });
+    return Array.from(set);
+  }, [vendors]);
+
+  const filteredVendors = useMemo(() => {
+    return vendors.filter((vendor) => {
+      const vendorName = (vendor?.name || vendor?.shop_name || "").toLowerCase();
+      const vendorEmail = (vendor?.email || vendor?.user?.email || "").toLowerCase();
+      const vendorCategory = vendor?.vendor_type || "";
+      const matchesName = selectionName ? vendorName.includes(selectionName.toLowerCase()) : true;
+      const matchesEmail = selectionEmail ? vendorEmail.includes(selectionEmail.toLowerCase()) : true;
+      const matchesType = selectionType ? vendorCategory === selectionType : true;
+      return matchesName && matchesEmail && matchesType;
+    });
+  }, [vendors, selectionName, selectionEmail, selectionType]);
+
+  const selectedVendor = useMemo(() => {
+    return filteredVendors.find((vendor) => getVendorIdentifier(vendor) === selectedVendorId) || vendors.find((vendor) => getVendorIdentifier(vendor) === selectedVendorId) || null;
+  }, [filteredVendors, vendors, selectedVendorId]);
 
   useEffect(() => () => {
     if (logoPreview) URL.revokeObjectURL(logoPreview);
   }, [logoPreview]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function fetchRoles() {
-      setRolesLoading(true);
-      setRolesError("");
-      try {
-        const response = await adminApi.roles();
-        const rawList = response?.data?.data || response?.data || response || [];
-        const seen = new Set();
-        const normalized = (Array.isArray(rawList) ? rawList : [])
-          .map((role) => {
-            const slugSource = role?.slug || role?.name || role?.role || role?.value || role;
-            const normalizedSlug = normalizeRoleValue(slugSource);
-            if (!normalizedSlug || !allowedVendorRoles.includes(normalizedSlug) || seen.has(normalizedSlug)) {
-              return null;
-            }
-            seen.add(normalizedSlug);
-            const label = role?.display_name || role?.label || role?.name || formatRoleLabel(normalizedSlug);
-            return { value: normalizedSlug, label };
-          })
-          .filter(Boolean);
-        if (!cancelled) {
-          setRoleOptions(normalized);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setRolesError(err?.response?.data?.message || "Failed to load roles.");
-          setRoleOptions([]);
-        }
-      } finally {
-        if (!cancelled) setRolesLoading(false);
-      }
+    if (!selectedVendor) {
+      setProfileForm(profileDefaults);
+      setSlugTouched(false);
+      return;
     }
 
-    fetchRoles();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!roleOptions.length) return;
-    setAccountForm((prev) => (prev.role ? prev : { ...prev, role: roleOptions[0].value }));
-  }, [roleOptions]);
+    setProfileForm({
+      shop_name: selectedVendor.shop_name || selectedVendor.name || "",
+      shop_slug:
+        selectedVendor.shop_slug ||
+        selectedVendor.slug ||
+        slugify(selectedVendor.shop_name || selectedVendor.name || ""),
+      description: selectedVendor.description || ""
+    });
+    setSlugTouched(false);
+  }, [selectedVendor]);
 
   function openReview(row) {
     setSelected(row);
@@ -156,11 +130,13 @@ export default function VendorsPage() {
   }
 
   function openCreateModal() {
-    const defaultRole = roleOptions[0]?.value || "";
-    setAccountForm({ ...accountDefaults, role: defaultRole });
     setProfileForm(profileDefaults);
     setSlugTouched(false);
     setCreateStatus(null);
+    setSelectedVendorId("");
+    setSelectionName("");
+    setSelectionEmail("");
+    setSelectionType("");
     setLogoFile(null);
     if (logoPreview) URL.revokeObjectURL(logoPreview);
     setLogoPreview("");
@@ -188,10 +164,6 @@ export default function VendorsPage() {
     } finally {
       setSaving(false);
     }
-  }
-
-  function handleAccountChange(field, value) {
-    setAccountForm((prev) => ({ ...prev, [field]: value }));
   }
 
   function handleProfileChange(field, value) {
@@ -224,8 +196,8 @@ export default function VendorsPage() {
   async function handleCreateVendor(e) {
     e.preventDefault();
     if (creating) return;
-    if (!accountForm.role) {
-      setCreateStatus({ type: "error", message: "Please wait for roles to load before creating a vendor." });
+    if (!selectedVendor) {
+      setCreateStatus({ type: "error", message: "Select a vendor before saving profile details." });
       return;
     }
 
@@ -233,17 +205,6 @@ export default function VendorsPage() {
     setCreating(true);
 
     try {
-      const registerPayload = {
-        name: accountForm.name.trim(),
-        email: accountForm.email.trim().toLowerCase(),
-        phone: accountForm.phone.trim(),
-        password: accountForm.password,
-        role: accountForm.role
-      };
-
-      const registerRes = await authApi.register(registerPayload);
-      const createdUser = registerRes?.data?.user || registerRes?.user || registerRes;
-
       const formData = new FormData();
       formData.append("shop_name", profileForm.shop_name.trim());
       formData.append("shop_slug", profileForm.shop_slug.trim());
@@ -251,13 +212,11 @@ export default function VendorsPage() {
       if (logoFile) {
         formData.append("logo", logoFile);
       }
-      if (createdUser?.id) {
-        formData.append("user_id", createdUser.id);
-      }
+      formData.append("user_id", getVendorIdentifier(selectedVendor));
 
       await vendorApi.createProfile(formData);
 
-      setToast({ open: true, tone: "success", message: "Vendor account created." });
+      setToast({ open: true, tone: "success", message: "Vendor profile saved." });
       setCreateOpen(false);
       reload();
     } catch (err) {
@@ -267,9 +226,6 @@ export default function VendorsPage() {
       setCreating(false);
     }
   }
-
-  const roleSelectHint = rolesLoading ? "Fetching roles..." : "Roles synced from /api/v1/admin/roles";
-  const roleSelectDisabled = rolesLoading || !roleOptions.length;
 
   return (
     <div className="stack gap-lg">
@@ -306,7 +262,7 @@ export default function VendorsPage() {
               Refresh
             </Button>
             <Button type="button" variant="primary" onClick={openCreateModal}>
-              Add New Vendor
+              Add Vendor Profile
             </Button>
           </div>
         )}
@@ -365,37 +321,47 @@ export default function VendorsPage() {
         </div>
       </Modal>
 
-      <Modal open={createOpen} title="Add New Vendor" onClose={closeCreateModal} footer={null} className="vendorModal">
+      <Modal open={createOpen} title="Add Vendor Profile" onClose={closeCreateModal} footer={null} className="vendorModal">
         <form className="stack gap-md" onSubmit={handleCreateVendor}>
           <div className="vendorModal__section">
             <div>
-              <div className="vendorModal__sectionTitle">Account Access</div>
-              <div className="muted">Account is created via /api/v1/auth/register</div>
+              <div className="vendorModal__sectionTitle">Find Vendor</div>
+              <div className="muted">Search for an existing vendor record to attach profile details.</div>
             </div>
-            <div className="vendorModal__grid">
-              <Input label="Full name" value={accountForm.name} required onChange={(e) => handleAccountChange("name", e.target.value)} />
-              <Input label="Email" type="email" value={accountForm.email} required onChange={(e) => handleAccountChange("email", e.target.value)} />
-              <Input label="Phone" value={accountForm.phone} required onChange={(e) => handleAccountChange("phone", e.target.value)} />
-              <Input label="Password" type="password" value={accountForm.password} required onChange={(e) => handleAccountChange("password", e.target.value)} />
+            <div className="vendorModal__grid vendorModal__grid--selection">
+              <Input
+                label="Filter by name"
+                placeholder="e.g. Smart Supplies"
+                value={selectionName}
+                onChange={(e) => setSelectionName(e.target.value)}
+              />
+              <Input
+                label="Filter by email"
+                type="email"
+                placeholder="vendor@domain.com"
+                value={selectionEmail}
+                onChange={(e) => setSelectionEmail(e.target.value)}
+              />
+              <Select label="Filter by type" value={selectionType} onChange={(e) => setSelectionType(e.target.value)}>
+                <option value="">Any type</option>
+                {vendorTypeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </Select>
               <Select
-                label="Role"
-                value={accountForm.role}
-                onChange={(e) => handleAccountChange("role", e.target.value)}
-                disabled={roleSelectDisabled}
-                hint={rolesError ? undefined : roleSelectHint}
-                error={rolesError}
+                label="Select vendor"
+                required
+                value={selectedVendorId}
+                onChange={(e) => setSelectedVendorId(e.target.value)}
               >
-                {rolesLoading ? (
-                  <option value="">Loading roles...</option>
-                ) : roleOptions.length ? (
-                  roleOptions.map((role) => (
-                    <option key={role.value} value={role.value}>
-                      {role.label}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">No allowed roles available</option>
-                )}
+                <option value="">-- Choose a vendor --</option>
+                {filteredVendors.map((vendor) => (
+                  <option key={getVendorIdentifier(vendor)} value={getVendorIdentifier(vendor)}>
+                    {vendor.name || vendor.shop_name || "Unnamed"} — {vendor.email || vendor.user?.email || "no email"}
+                  </option>
+                ))}
               </Select>
             </div>
           </div>
@@ -450,13 +416,8 @@ export default function VendorsPage() {
             <Button type="button" variant="secondary" onClick={closeCreateModal} disabled={creating}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              loading={creating}
-              disabled={roleSelectDisabled}
-            >
-              Create vendor
+            <Button type="submit" variant="primary" loading={creating}>
+              Save profile
             </Button>
           </div>
         </form>

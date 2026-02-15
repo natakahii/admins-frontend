@@ -11,7 +11,16 @@ import Badge from "../../../components/ui/Badge.jsx";
 import Loader from "../../../components/ui/Loader.jsx";
 import { useListResource } from "../../shared/hooks/useListResource.js";
 import { adminApi } from "../api/admin.api.js";
+import { authApi } from "../../auth/api/auth.api.js";
 import { safeText } from "../../../utils/formatters.js";
+
+const createDefaults = {
+  name: "",
+  email: "",
+  phone: "",
+  password: "",
+  role: "customer"
+};
 
 export default function UsersPage() {
   const [search, setSearch] = useState("");
@@ -40,11 +49,27 @@ export default function UsersPage() {
   const [toast, setToast] = useState({ open: false, tone: "info", message: "" });
   const [statusBanner, setStatusBanner] = useState("");
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createForm, setCreateForm] = useState(createDefaults);
+  const [createStatus, setCreateStatus] = useState(null);
+
   function openStatusModal(row) {
     setSelected(row);
     setNewStatus(row?.status || "active");
     setReason("");
     setOpen(true);
+  }
+
+  function openCreateModal() {
+    setCreateForm(createDefaults);
+    setCreateStatus(null);
+    setCreateOpen(true);
+  }
+
+  function closeCreateModal() {
+    if (creating) return;
+    setCreateOpen(false);
   }
 
   async function saveStatus() {
@@ -64,6 +89,37 @@ export default function UsersPage() {
       });
     } finally {
       setSaving(false);
+    }
+  }
+
+  function handleCreateChange(field, value) {
+    setCreateForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  async function handleCreateUser(e) {
+    e.preventDefault();
+    if (creating) return;
+
+    setCreateStatus(null);
+    setCreating(true);
+
+    try {
+      await authApi.register({
+        name: createForm.name.trim(),
+        email: createForm.email.trim().toLowerCase(),
+        phone: createForm.phone.trim(),
+        password: createForm.password,
+        role: createForm.role
+      });
+
+      setToast({ open: true, tone: "success", message: "User added. Verification email sent." });
+      setCreateOpen(false);
+      reload();
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || "Failed to create user.";
+      setCreateStatus({ type: "error", message });
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -91,7 +147,20 @@ export default function UsersPage() {
         </div>
       </Card>
 
-      <Card title="Users List" subtitle="Admin: GET /api/v1/admin/users">
+      <Card
+        title="Users List"
+        subtitle="Admin: GET /api/v1/admin/users"
+        actions={(
+          <div className="row gap-sm">
+            <Button type="button" variant="secondary" onClick={reload}>
+              Refresh
+            </Button>
+            <Button type="button" variant="primary" onClick={openCreateModal}>
+              Add New User
+            </Button>
+          </div>
+        )}
+      >
         {loading ? <Loader label="Loading users..." /> : null}
         {statusBanner ? (
           <div className="alert alert--success">{statusBanner}</div>
@@ -149,6 +218,59 @@ export default function UsersPage() {
           </Select>
           <Input label="Reason (optional)" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Short reason..." />
         </div>
+      </Modal>
+
+      <Modal open={createOpen} title="Add New User" onClose={closeCreateModal} footer={null}>
+        <form className="stack gap-md" onSubmit={handleCreateUser}>
+          <Input
+            label="Full name"
+            value={createForm.name}
+            required
+            onChange={(e) => handleCreateChange("name", e.target.value)}
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={createForm.email}
+            required
+            onChange={(e) => handleCreateChange("email", e.target.value)}
+            hint="A verification email will be sent automatically"
+          />
+          <Input
+            label="Phone"
+            value={createForm.phone}
+            required
+            onChange={(e) => handleCreateChange("phone", e.target.value)}
+          />
+          <Input
+            label="Temporary password"
+            type="password"
+            value={createForm.password}
+            required
+            onChange={(e) => handleCreateChange("password", e.target.value)}
+          />
+          <Select label="Role" value={createForm.role} onChange={(e) => handleCreateChange("role", e.target.value)}>
+            <option value="customer">customer</option>
+            <option value="individual_vendor">individual_vendor</option>
+            <option value="business_vendor">business_vendor</option>
+            <option value="admin">admin</option>
+          </Select>
+
+          {createStatus ? (
+            <div className={`alert ${createStatus.type === "error" ? "alert--danger" : "alert--success"}`}>
+              {createStatus.message}
+            </div>
+          ) : null}
+
+          <div className="row rowEnd gap-sm">
+            <Button type="button" variant="secondary" onClick={closeCreateModal} disabled={creating}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" loading={creating}>
+              Create user
+            </Button>
+          </div>
+        </form>
       </Modal>
 
       <Toast
