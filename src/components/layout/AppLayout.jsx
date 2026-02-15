@@ -48,6 +48,11 @@ export default function AppLayout() {
     return "Admin";
   }, [location.pathname]);
 
+  useEffect(() => {
+    const isDashboard = location.pathname === "/app/admin/dashboard";
+    document.title = isDashboard ? "Admin Dashboard" : "Natakahii Admin";
+  }, [location.pathname]);
+
   return (
     <div className="shell">
       <div
