@@ -21,7 +21,7 @@ const accountDefaults = {
   email: "",
   phone: "",
   password: "",
-  role: "individual_vendor"
+  role: ""
 };
 
 const profileDefaults = {
@@ -37,6 +37,25 @@ function slugify(value = "") {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
+}
+
+const allowedVendorRoles = ["customer", "individual_vendor", "business_vendor"];
+
+function normalizeRoleValue(value = "") {
+  return value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/-+/g, "_");
+}
+
+function formatRoleLabel(slug = "") {
+  if (!slug) return "";
+  return slug
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 export default function VendorsPage() {
@@ -65,6 +84,10 @@ export default function VendorsPage() {
 
   const [toast, setToast] = useState({ open: false, tone: "info", message: "" });
 
+  const [roleOptions, setRoleOptions] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [rolesError, setRolesError] = useState("");
+
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createStatus, setCreateStatus] = useState(null);
@@ -79,6 +102,52 @@ export default function VendorsPage() {
     if (logoPreview) URL.revokeObjectURL(logoPreview);
   }, [logoPreview]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchRoles() {
+      setRolesLoading(true);
+      setRolesError("");
+      try {
+        const response = await adminApi.roles();
+        const rawList = response?.data?.data || response?.data || response || [];
+        const seen = new Set();
+        const normalized = (Array.isArray(rawList) ? rawList : [])
+          .map((role) => {
+            const slugSource = role?.slug || role?.name || role?.role || role?.value || role;
+            const normalizedSlug = normalizeRoleValue(slugSource);
+            if (!normalizedSlug || !allowedVendorRoles.includes(normalizedSlug) || seen.has(normalizedSlug)) {
+              return null;
+            }
+            seen.add(normalizedSlug);
+            const label = role?.display_name || role?.label || role?.name || formatRoleLabel(normalizedSlug);
+            return { value: normalizedSlug, label };
+          })
+          .filter(Boolean);
+        if (!cancelled) {
+          setRoleOptions(normalized);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setRolesError(err?.response?.data?.message || "Failed to load roles.");
+          setRoleOptions([]);
+        }
+      } finally {
+        if (!cancelled) setRolesLoading(false);
+      }
+    }
+
+    fetchRoles();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!roleOptions.length) return;
+    setAccountForm((prev) => (prev.role ? prev : { ...prev, role: roleOptions[0].value }));
+  }, [roleOptions]);
+
   function openReview(row) {
     setSelected(row);
     setDecision("approved");
@@ -87,7 +156,8 @@ export default function VendorsPage() {
   }
 
   function openCreateModal() {
-    setAccountForm(accountDefaults);
+    const defaultRole = roleOptions[0]?.value || "";
+    setAccountForm({ ...accountDefaults, role: defaultRole });
     setProfileForm(profileDefaults);
     setSlugTouched(false);
     setCreateStatus(null);
@@ -154,6 +224,10 @@ export default function VendorsPage() {
   async function handleCreateVendor(e) {
     e.preventDefault();
     if (creating) return;
+    if (!accountForm.role) {
+      setCreateStatus({ type: "error", message: "Please wait for roles to load before creating a vendor." });
+      return;
+    }
 
     setCreateStatus(null);
     setCreating(true);
@@ -193,6 +267,9 @@ export default function VendorsPage() {
       setCreating(false);
     }
   }
+
+  const roleSelectHint = rolesLoading ? "Fetching roles..." : "Roles synced from /api/v1/admin/roles";
+  const roleSelectDisabled = rolesLoading || !roleOptions.length;
 
   return (
     <div className="stack gap-lg">
@@ -300,10 +377,25 @@ export default function VendorsPage() {
               <Input label="Email" type="email" value={accountForm.email} required onChange={(e) => handleAccountChange("email", e.target.value)} />
               <Input label="Phone" value={accountForm.phone} required onChange={(e) => handleAccountChange("phone", e.target.value)} />
               <Input label="Password" type="password" value={accountForm.password} required onChange={(e) => handleAccountChange("password", e.target.value)} />
-              <Select label="Role" value={accountForm.role} onChange={(e) => handleAccountChange("role", e.target.value)}>
-                <option value="customer">customer</option>
-                <option value="individual_vendor">individual_vendor</option>
-                <option value="business_vendor">business_vendor</option>
+              <Select
+                label="Role"
+                value={accountForm.role}
+                onChange={(e) => handleAccountChange("role", e.target.value)}
+                disabled={roleSelectDisabled}
+                hint={rolesError ? undefined : roleSelectHint}
+                error={rolesError}
+              >
+                {rolesLoading ? (
+                  <option value="">Loading roles...</option>
+                ) : roleOptions.length ? (
+                  roleOptions.map((role) => (
+                    <option key={role.value} value={role.value}>
+                      {role.label}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">No allowed roles available</option>
+                )}
               </Select>
             </div>
           </div>
@@ -358,7 +450,12 @@ export default function VendorsPage() {
             <Button type="button" variant="secondary" onClick={closeCreateModal} disabled={creating}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" loading={creating}>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={creating}
+              disabled={roleSelectDisabled}
+            >
               Create vendor
             </Button>
           </div>

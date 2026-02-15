@@ -15,6 +15,9 @@ export const adminApi = {
   vendors(params) {
     return api.get("/api/v1/admin/vendors", { params }).then((r) => r.data);
   },
+  roles(params) {
+    return api.get("/api/v1/admin/roles", { params }).then((r) => r.data);
+  },
   reviewVendorVerification(vendorId, payload) {
     return api.post(`/api/v1/admin/vendors/${vendorId}/verification/review`, payload).then((r) => r.data);
   },
