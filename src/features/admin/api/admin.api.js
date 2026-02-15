@@ -5,6 +5,10 @@ export const adminApi = {
     return api.get("/api/v1/admin/dashboard").then((r) => r.data);
   },
 
+  categories() {
+    return api.get("/api/v1/categories").then((r) => r.data);
+  },
+
   users(params) {
     return api.get("/api/v1/admin/users", { params }).then((r) => r.data);
   },
@@ -30,6 +34,9 @@ export const adminApi = {
   },
   moderateProduct(productId, payload) {
     return api.patch(`/api/v1/admin/products/${productId}/moderation`, payload).then((r) => r.data);
+  },
+  productDetail(productId) {
+    return api.get(`/api/v1/products/${productId}`).then((r) => r.data);
   },
 
   orders(params) {

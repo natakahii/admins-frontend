@@ -5,11 +5,15 @@ import Topbar from "./Topbar.jsx";
 import { adminNav } from "../../config/nav.admin.js";
 import { superAdminNav } from "../../config/nav.superAdmin.js";
 import { useAuth } from "../../app/providers/authContext.js";
+import { adminApi } from "../../features/admin/api/admin.api.js";
 
 export default function AppLayout() {
   const { adminRole } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [categoriesError, setCategoriesError] = useState("");
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -43,6 +47,34 @@ export default function AppLayout() {
     return base;
   }, [adminRole]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchCategories() {
+      setCategoriesLoading(true);
+      setCategoriesError("");
+      try {
+        const res = await adminApi.categories();
+        const list = res?.categories || res?.data || res || [];
+        if (!cancelled) {
+          setCategories(Array.isArray(list) ? list : []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setCategoriesError(err?.response?.data?.message || "Failed to load categories.");
+          setCategories([]);
+        }
+      } finally {
+        if (!cancelled) setCategoriesLoading(false);
+      }
+    }
+
+    fetchCategories();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const sectionTitle = useMemo(() => {
     if (location.pathname.includes("/app/super/")) return "Super Admin";
     return "Admin";
@@ -65,6 +97,9 @@ export default function AppLayout() {
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onNavigate={() => setSidebarOpen(false)}
+        categories={categories}
+        categoriesLoading={categoriesLoading}
+        categoriesError={categoriesError}
       />
       <div className="shell__main">
         <Topbar

@@ -37,12 +37,33 @@ export default function ProductsPage() {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ open: false, tone: "info", message: "" });
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
+  const [detailData, setDetailData] = useState(null);
+  const [detailProduct, setDetailProduct] = useState(null);
 
   function openModeration(row) {
     setSelected(row);
     setNewStatus(row?.status || "active");
     setNotes("");
     setOpen(true);
+  }
+
+  async function openProductDetail(row) {
+    setDetailProduct(row);
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetailError("");
+    setDetailData(null);
+    try {
+      const res = await adminApi.productDetail(row.id);
+      setDetailData(res);
+    } catch (err) {
+      setDetailError(err?.response?.data?.message || "Failed to fetch product details.");
+    } finally {
+      setDetailLoading(false);
+    }
   }
 
   async function saveModeration() {
@@ -110,9 +131,14 @@ export default function ProductsPage() {
               header: "Action",
               width: "160px",
               render: (r) => (
-                <Button variant="secondary" size="sm" onClick={() => openModeration(r)}>
-                  Moderate
-                </Button>
+                <div className="row gap-xs">
+                  <Button variant="secondary" size="sm" onClick={() => openModeration(r)}>
+                    Moderate
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => openProductDetail(r)}>
+                    View
+                  </Button>
+                </div>
               )
             }
           ]}
@@ -148,6 +174,109 @@ export default function ProductsPage() {
         message={toast.message}
         onClose={() => setToast((t) => ({ ...t, open: false }))}
       />
+
+      <Modal
+        open={detailOpen}
+        title={detailProduct ? `Product Details — ${detailProduct.name}` : "Product Details"}
+        onClose={() => setDetailOpen(false)}
+        footer={null}
+        className="productDetailModal"
+      >
+        {detailLoading ? <Loader label="Loading product..." /> : null}
+        {detailError ? <div className="alert alert--danger">{detailError}</div> : null}
+        {!detailLoading && !detailError ? (
+          <ProductDetailContent data={detailData} />
+        ) : null}
+      </Modal>
+    </div>
+  );
+}
+
+function ProductDetailContent({ data }) {
+  const product = data?.product || {};
+  const reviews = data?.recent_reviews || [];
+  const media = Array.isArray(product.images) ? product.images : [];
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  const attributes = Array.isArray(product.attributes) ? product.attributes : [];
+
+  return (
+    <div className="productDetail">
+      <div className="productDetail__media">
+        {media.length ? (
+          media.map((img) => (
+            <img key={img} src={img} alt={product.name} />
+          ))
+        ) : (
+          <div className="productDetail__placeholder">No images available</div>
+        )}
+      </div>
+      <div className="productDetail__meta">
+        <div>
+          <div className="productDetail__label">Name</div>
+          <div className="productDetail__value">{safeText(product.name)}</div>
+        </div>
+        <div>
+          <div className="productDetail__label">Price</div>
+          <div className="productDetail__value">{safeText(product.price)}</div>
+        </div>
+        <div>
+          <div className="productDetail__label">Reviews</div>
+          <div className="productDetail__value">
+            {safeText(product.reviews_count || 0)} reviews · {safeText(product.reviews_avg_rating || 0)} ★
+          </div>
+        </div>
+      </div>
+
+      <div className="productDetail__section">
+        <div className="productDetail__sectionTitle">Variants</div>
+        {variants.length ? (
+          <div className="productDetail__chips">
+            {variants.map((variant, idx) => (
+              <div key={variant.id || idx} className="productDetail__chip">
+                <div className="productDetail__chipName">{variant.name || `Variant ${idx + 1}`}</div>
+                {variant.price ? <div className="productDetail__chipMeta">{variant.price}</div> : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="muted">No variants.</div>
+        )}
+      </div>
+
+      <div className="productDetail__section">
+        <div className="productDetail__sectionTitle">Attributes</div>
+        {attributes.length ? (
+          <dl className="productDetail__attributes">
+            {attributes.map((attr, idx) => (
+              <div key={attr.id || idx} className="productDetail__attribute">
+                <dt>{attr.name || attr.key}</dt>
+                <dd>{attr.value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <div className="muted">No attributes provided.</div>
+        )}
+      </div>
+
+      <div className="productDetail__section">
+        <div className="productDetail__sectionTitle">Recent Reviews</div>
+        {reviews.length ? (
+          <div className="productDetail__reviews">
+            {reviews.map((review) => (
+              <div key={review.id} className="productDetail__review">
+                <div className="productDetail__reviewHeader">
+                  <strong>{review.author || "Anonymous"}</strong>
+                  <span>{review.rating ? `${review.rating} ★` : ""}</span>
+                </div>
+                <p>{review.comment || "No comment."}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="muted">No reviews yet.</div>
+        )}
+      </div>
     </div>
   );
 }
