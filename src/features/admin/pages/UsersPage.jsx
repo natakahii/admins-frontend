@@ -251,9 +251,9 @@ export default function UsersPage() {
           />
           <Select label="Role" value={createForm.role} onChange={(e) => handleCreateChange("role", e.target.value)}>
             <option value="customer">customer</option>
-            <option value="individual_vendor">individual_vendor</option>
-            <option value="business_vendor">business_vendor</option>
-            <option value="admin">admin</option>
+            <option value="individual_vendor">individual vendor</option>
+            <option value="business_vendor">business vendor</option>
+            
           </Select>
 
           {createStatus ? (
