@@ -137,15 +137,18 @@ a { color: inherit; text-decoration: none; }
 
 /* Topbar */
 .topbar {
-  background: rgba(255,255,255,0.85);
-  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
   padding: 14px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: relative;
-  z-index: 65;
+  gap: 16px;
+  box-shadow: 0 12px 30px rgba(15,23,42,0.08);
 }
  .topbar__left { display: flex; align-items: center; gap: 12px; min-width: 0; }
  .topbar__titles { min-width: 0; }
