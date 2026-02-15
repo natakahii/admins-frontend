@@ -1,8 +1,8 @@
 import React from "react";
 
-export default function Card({ title, subtitle, actions, children }) {
+export default function Card({ title, subtitle, actions, children, className = "" }) {
   return (
-    <div className="card">
+    <div className={`card${className ? ` ${className}` : ""}`}>
       {(title || subtitle || actions) ? (
         <div className="card__header">
           <div>

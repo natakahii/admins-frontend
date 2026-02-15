@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import Button from "../ui/Button.jsx";
-import Badge from "../ui/Badge.jsx";
 import Modal from "../ui/Modal.jsx";
 import Icon from "./icons/Icon.jsx";
 import Input from "../ui/Input.jsx";
@@ -71,8 +70,7 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
   const displayName = user?.name || "Admin";
   const displayMeta = user?.email || user?.phone || "";
   const initial = (displayName?.trim()?.[0] || "A").toUpperCase();
-
-  const tone = adminRole === "super_admin" ? "warning" : "primary";
+  const roleLabel = (adminRole || "admin").replace(/_/g, " ");
 
   const canCloseProfile = !(profileSaving || photoUploading || photoRemoving);
 
@@ -102,7 +100,7 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
     setLoggingOut(true);
     try {
       await logout();
-    } catch (e) {
+    } catch {
       // even if backend fails, remove UI session and route to login
     } finally {
       setLogoutOpen(false);
@@ -208,7 +206,15 @@ export default function Topbar({ sectionTitle, sidebarOpen = false, onToggleSide
       </div>
 
       <div className="topbar__right" ref={menuRef}>
-        <Badge tone={tone}>{adminRole || "admin"}</Badge>
+        <button
+          type="button"
+          className="notifButton"
+          aria-label={`Notifications and updates for ${roleLabel}`}
+          title={`Logged in as ${roleLabel}`}
+        >
+          <Icon name="bell" />
+          <span className="notifButton__dot" aria-hidden />
+        </button>
 
         <button
           type="button"
