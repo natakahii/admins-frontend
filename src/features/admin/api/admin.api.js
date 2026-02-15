@@ -11,6 +11,9 @@ export const adminApi = {
   updateUserStatus(userId, payload) {
     return api.patch(`/api/v1/admin/users/${userId}/status`, payload).then((r) => r.data);
   },
+  verifyUser(userId) {
+    return api.post(`/api/v1/admin/users/${userId}/verify`).then((r) => r.data);
+  },
 
   vendors(params) {
     return api.get("/api/v1/admin/vendors", { params }).then((r) => r.data);

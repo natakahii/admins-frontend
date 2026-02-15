@@ -22,18 +22,26 @@ const createDefaults = {
   role: "customer"
 };
 
+function getUserVerificationState(user = {}) {
+  if (typeof user.is_verified === "boolean") return user.is_verified ? "verified" : "pending";
+  if (typeof user.email_verified === "boolean") return user.email_verified ? "verified" : "pending";
+  if (user.verification_status) return user.verification_status;
+  if (user.email_verified_at) return "verified";
+  return "pending";
+}
+
 export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
-  const [role, setRole] = useState("");
+  const [verificationFilter, setVerificationFilter] = useState("");
 
   const params = useMemo(() => {
     const p = {};
     if (search) p.search = search;
     if (status) p.status = status;
-    if (role) p.role = role;
+    if (verificationFilter) p.verification_status = verificationFilter;
     return p;
-  }, [search, status, role]);
+  }, [search, status, verificationFilter]);
 
   const { loading, error, data, reload } = useListResource({
     url: "/api/v1/admin/users",
@@ -54,6 +62,11 @@ export default function UsersPage() {
   const [createForm, setCreateForm] = useState(createDefaults);
   const [createStatus, setCreateStatus] = useState(null);
 
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [verifyingUser, setVerifyingUser] = useState(null);
+  const [verifyStatus, setVerifyStatus] = useState(null);
+  const [verifying, setVerifying] = useState(false);
+
   function openStatusModal(row) {
     setSelected(row);
     setNewStatus(row?.status || "active");
@@ -61,10 +74,39 @@ export default function UsersPage() {
     setOpen(true);
   }
 
+  async function handleVerifyUser() {
+    if (!verifyingUser?.id) return;
+    setVerifying(true);
+    setVerifyStatus(null);
+    try {
+      await adminApi.verifyUser(verifyingUser.id);
+      setToast({ open: true, tone: "success", message: "User verified and notified." });
+      setStatusBanner("User verified and email sent.");
+      setVerifyOpen(false);
+      reload();
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || "Failed to verify user.";
+      setVerifyStatus({ type: "error", message });
+    } finally {
+      setVerifying(false);
+    }
+  }
+
   function openCreateModal() {
     setCreateForm(createDefaults);
     setCreateStatus(null);
     setCreateOpen(true);
+  }
+
+  function openVerifyModal(row) {
+    setVerifyingUser(row);
+    setVerifyStatus(null);
+    setVerifyOpen(true);
+  }
+
+  function closeVerifyModal() {
+    if (verifying) return;
+    setVerifyOpen(false);
   }
 
   function closeCreateModal() {
@@ -143,7 +185,11 @@ export default function UsersPage() {
             <option value="suspended">suspended</option>
             <option value="blocked">blocked</option>
           </Select>
-          <Input label="Role (optional)" placeholder="customer/vendor/admin..." value={role} onChange={(e) => setRole(e.target.value)} />
+          <Select label="Verify User" value={verificationFilter} onChange={(e) => setVerificationFilter(e.target.value)}>
+            <option value="">Any</option>
+            <option value="verified">verified</option>
+            <option value="pending">pending</option>
+          </Select>
         </div>
       </Card>
 
@@ -176,11 +222,20 @@ export default function UsersPage() {
             {
               key: "status",
               header: "Status",
-              width: "140px",
+              width: "120px",
               render: (r) => {
-                const tone =
-                  r.status === "active" ? "success" : r.status === "suspended" ? "warning" : "danger";
+                const tone = r.status === "active" ? "success" : r.status === "suspended" ? "warning" : "danger";
                 return <Badge tone={tone}>{safeText(r.status)}</Badge>;
+              }
+            },
+            {
+              key: "verification",
+              header: "Verification",
+              width: "150px",
+              render: (r) => {
+                const vState = getUserVerificationState(r);
+                const tone = vState === "verified" ? "success" : "warning";
+                return <Badge tone={tone}>{safeText(vState)}</Badge>;
               }
             },
             {
@@ -188,9 +243,16 @@ export default function UsersPage() {
               header: "Actions",
               width: "160px",
               render: (r) => (
-                <Button variant="secondary" size="sm" onClick={() => openStatusModal(r)}>
-                  Update Status
-                </Button>
+                <div className="stack gap-xs">
+                  <Button variant="secondary" size="sm" onClick={() => openStatusModal(r)}>
+                    Update Status
+                  </Button>
+                  {getUserVerificationState(r) === "pending" ? (
+                    <Button variant="primary" size="sm" onClick={() => openVerifyModal(r)}>
+                      Verify User
+                    </Button>
+                  ) : null}
+                </div>
               )
             }
           ]}
@@ -217,6 +279,43 @@ export default function UsersPage() {
             <option value="blocked">blocked</option>
           </Select>
           <Input label="Reason (optional)" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Short reason..." />
+        </div>
+      </Modal>
+
+      <Modal
+        open={verifyOpen}
+        title={verifyingUser ? `Verify User — ${verifyingUser.name || verifyingUser.email}` : "Verify User"}
+        onClose={closeVerifyModal}
+        footer={null}
+      >
+        <div className="stack gap-md">
+          <p>
+            Approving verification will activate the user account and send them an email with a login button. That link
+            routes them to the correct workspace based on their role automatically.
+          </p>
+          <div className="grid2">
+            <div>
+              <div className="muted">User email</div>
+              <strong>{verifyingUser?.email}</strong>
+            </div>
+            <div>
+              <div className="muted">Role</div>
+              <strong>{safeText(verifyingUser?.role)}</strong>
+            </div>
+          </div>
+          {verifyStatus ? (
+            <div className={`alert ${verifyStatus.type === "error" ? "alert--danger" : "alert--success"}`}>
+              {verifyStatus.message}
+            </div>
+          ) : null}
+          <div className="row rowEnd gap-sm">
+            <Button type="button" variant="secondary" onClick={closeVerifyModal} disabled={verifying}>
+              Cancel
+            </Button>
+            <Button type="button" variant="primary" loading={verifying} onClick={handleVerifyUser}>
+              Verify & Notify
+            </Button>
+          </div>
         </div>
       </Modal>
 
