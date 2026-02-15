@@ -15,6 +15,7 @@ import AdminDashboardPage from "../features/admin/pages/DashboardPage.jsx";
 import UsersPage from "../features/admin/pages/UsersPage.jsx";
 import VendorsPage from "../features/admin/pages/VendorsPage.jsx";
 import ProductsPage from "../features/admin/pages/ProductsPage.jsx";
+import CategoriesPage from "../features/admin/pages/CategoriesPage.jsx";
 import OrdersPage from "../features/admin/pages/OrdersPage.jsx";
 import PaymentsPage from "../features/admin/pages/PaymentsPage.jsx";
 import EscrowPage from "../features/admin/pages/EscrowPage.jsx";
@@ -58,6 +59,7 @@ export const router = createBrowserRouter([
           { path: "users", element: <UsersPage /> },
           { path: "vendors", element: <VendorsPage /> },
           { path: "products", element: <ProductsPage /> },
+          { path: "categories", element: <CategoriesPage /> },
           { path: "orders", element: <OrdersPage /> },
           { path: "payments", element: <PaymentsPage /> },
           { path: "escrow", element: <EscrowPage /> },

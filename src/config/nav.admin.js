@@ -3,6 +3,7 @@ export const adminNav = [
   { label: "Users", path: "/app/admin/users", icon: "users" },
   { label: "Vendors", path: "/app/admin/vendors", icon: "store" },
   { label: "Products", path: "/app/admin/products", icon: "box" },
+  { label: "Categories", path: "/app/admin/categories", icon: "layers" },
   { label: "Orders", path: "/app/admin/orders", icon: "receipt" },
   { label: "Payments", path: "/app/admin/payments", icon: "credit-card" },
   { label: "Escrow", path: "/app/admin/escrow", icon: "shield" },

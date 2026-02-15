@@ -5,8 +5,11 @@ export const adminApi = {
     return api.get("/api/v1/admin/dashboard").then((r) => r.data);
   },
 
-  categories() {
-    return api.get("/api/v1/categories").then((r) => r.data);
+  categories(params) {
+    return api.get("/api/v1/categories", { params }).then((r) => r.data);
+  },
+  createCategory(payload) {
+    return api.post("/api/v1/categories", payload).then((r) => r.data);
   },
 
   users(params) {
