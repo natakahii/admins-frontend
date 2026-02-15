@@ -1,6 +1,10 @@
 import { api } from "../../../services/apiClient.js";
 
 export const authApi = {
+  async register(payload) {
+    const res = await api.post("/api/v1/auth/register", payload);
+    return res.data;
+  },
   async login(payload) {
     const res = await api.post("/api/v1/auth/login", payload);
     return res.data;
