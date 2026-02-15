@@ -23,7 +23,9 @@ const icons = {
   settings: "⚙️",
   percent: "％",
   "badge-dollar-sign": "💰",
-  "scroll-text": "📜"
+  "scroll-text": "📜",
+  update: "📝",
+  verify: "✅"
 };
 
 export default function Icon({ name }) {

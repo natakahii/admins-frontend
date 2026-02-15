@@ -9,6 +9,7 @@ import Modal from "../../../components/ui/Modal.jsx";
 import Toast from "../../../components/feedback/Toast.jsx";
 import Badge from "../../../components/ui/Badge.jsx";
 import Loader from "../../../components/ui/Loader.jsx";
+import Icon from "../../../components/layout/icons/Icon.jsx";
 import { useListResource } from "../../shared/hooks/useListResource.js";
 import { adminApi } from "../api/admin.api.js";
 import { authApi } from "../../auth/api/auth.api.js";
@@ -241,15 +242,27 @@ export default function UsersPage() {
             {
               key: "actions",
               header: "Actions",
-              width: "160px",
+              width: "140px",
               render: (r) => (
-                <div className="stack gap-xs">
-                  <Button variant="secondary" size="sm" onClick={() => openStatusModal(r)}>
-                    Update Status
+                <div className="row gap-sm">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    aria-label="Update status"
+                    title="Update status"
+                    onClick={() => openStatusModal(r)}
+                  >
+                    <Icon name="update" />
                   </Button>
                   {getUserVerificationState(r) === "pending" ? (
-                    <Button variant="primary" size="sm" onClick={() => openVerifyModal(r)}>
-                      Verify User
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      aria-label="Verify user"
+                      title="Verify user"
+                      onClick={() => openVerifyModal(r)}
+                    >
+                      <Icon name="verify" />
                     </Button>
                   ) : null}
                 </div>
