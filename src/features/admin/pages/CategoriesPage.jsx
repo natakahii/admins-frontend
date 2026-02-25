@@ -10,6 +10,7 @@ import Toast from "../../../components/feedback/Toast.jsx";
 import Badge from "../../../components/ui/Badge.jsx";
 import Loader from "../../../components/ui/Loader.jsx";
 import Textarea from "../../../components/ui/Textarea.jsx";
+import IconSelector from "../../../components/ui/IconSelector.jsx";
 import { useListResource } from "../../shared/hooks/useListResource.js";
 import { adminApi } from "../api/admin.api.js";
 import { safeText } from "../../../utils/formatters.js";
@@ -19,7 +20,8 @@ const createDefaults = {
   slug: "",
   description: "",
   visibility: "public",
-  parent_id: ""
+  parent_id: "",
+  icon: ""
 };
 
 function slugify(value = "") {
@@ -58,6 +60,18 @@ export default function CategoriesPage() {
   const [creating, setCreating] = useState(false);
   const [createStatus, setCreateStatus] = useState(null);
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState(createDefaults);
+  const [editSlugTouched, setEditSlugTouched] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [editStatus, setEditStatus] = useState(null);
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteStatus, setDeleteStatus] = useState(null);
+
   const [toast, setToast] = useState({ open: false, tone: "info", message: "" });
 
   const params = useMemo(() => {
@@ -69,7 +83,7 @@ export default function CategoriesPage() {
   }, [search, visibility, levelFilter]);
 
   const { loading, error, data, reload } = useListResource({
-    url: "/api/v1/categories",
+    url: "/api/v1/admin/categories",
     params
   });
 
@@ -111,7 +125,12 @@ export default function CategoriesPage() {
   }
 
   function handleCreateChange(field, value) {
-    setCreateForm((prev) => ({ ...prev, [field]: value }));
+    console.log(`Form field updated: ${field} = ${value}`);
+    setCreateForm((prev) => {
+      const updated = { ...prev, [field]: value };
+      console.log('Updated form state:', updated);
+      return updated;
+    });
   }
 
   function handleNameChange(value) {
@@ -137,9 +156,11 @@ export default function CategoriesPage() {
         slug: createForm.slug.trim(),
         description: createForm.description.trim(),
         visibility: createForm.visibility,
-        parent_id: createForm.parent_id || null
+        parent_id: createForm.parent_id || null,
+        icon: createForm.icon && createForm.icon.trim() ? createForm.icon.trim() : null
       };
 
+      console.log('Category payload being sent:', payload);
       await adminApi.createCategory(payload);
       setToast({ open: true, tone: "success", message: "Category created." });
       setCreateOpen(false);
@@ -149,6 +170,100 @@ export default function CategoriesPage() {
       setCreateStatus({ type: "error", message });
     } finally {
       setCreating(false);
+    }
+  }
+
+  function openEditModal(category) {
+    setEditingId(category.id);
+    setEditForm({
+      name: category.name,
+      slug: category.slug,
+      description: category.description || "",
+      visibility: category.visibility || "public",
+      parent_id: category.parent_id || "",
+      icon: category.icon || ""
+    });
+    setEditSlugTouched(false);
+    setEditStatus(null);
+    setEditOpen(true);
+  }
+
+  function closeEditModal() {
+    if (updating) return;
+    setEditOpen(false);
+  }
+
+  function handleEditChange(field, value) {
+    setEditForm((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+  }
+
+  function handleEditNameChange(value) {
+    handleEditChange("name", value);
+    if (!editSlugTouched) {
+      handleEditChange("slug", slugify(value));
+    }
+  }
+
+  function handleEditSlugChange(value) {
+    setEditSlugTouched(true);
+    handleEditChange("slug", slugify(value));
+  }
+
+  async function handleUpdateCategory(e) {
+    e.preventDefault();
+    if (updating || !editingId) return;
+    setEditStatus(null);
+    setUpdating(true);
+    try {
+      const payload = {
+        name: editForm.name.trim(),
+        slug: editForm.slug.trim(),
+        description: editForm.description.trim(),
+        visibility: editForm.visibility,
+        parent_id: editForm.parent_id || null,
+        icon: editForm.icon && editForm.icon.trim() ? editForm.icon.trim() : null
+      };
+
+      await adminApi.updateCategory(editingId, payload);
+      setToast({ open: true, tone: "success", message: "Category updated." });
+      setEditOpen(false);
+      reload();
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || "Failed to update category.";
+      setEditStatus({ type: "error", message });
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  function openDeleteModal(category) {
+    setDeletingId(category.id);
+    setDeleteStatus(null);
+    setDeleteOpen(true);
+  }
+
+  function closeDeleteModal() {
+    if (deleting) return;
+    setDeleteOpen(false);
+  }
+
+  async function handleDeleteCategory() {
+    if (deleting || !deletingId) return;
+    setDeleteStatus(null);
+    setDeleting(true);
+    try {
+      await adminApi.deleteCategory(deletingId);
+      setToast({ open: true, tone: "success", message: "Category deleted." });
+      setDeleteOpen(false);
+      reload();
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || "Failed to delete category.";
+      setDeleteStatus({ type: "error", message });
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -192,7 +307,7 @@ export default function CategoriesPage() {
 
       <Card
         title="Categories"
-        subtitle="GET /api/v1/categories"
+        subtitle="GET /api/v1/admin/categories"
         actions={(
           <div className="row gap-sm">
             <Button type="button" variant="secondary" onClick={reload}>Refresh</Button>
@@ -213,6 +328,7 @@ export default function CategoriesPage() {
                 <div className="categoriesTable__name">
                   <strong>{safeText(row.name)}</strong>
                   <span className="muted">/{safeText(row.slug)}</span>
+                  {row.icon && <span className="muted" style={{fontSize: '0.85em'}}>🎨 {safeText(row.icon)}</span>}
                 </div>
               )
             },
@@ -241,11 +357,16 @@ export default function CategoriesPage() {
             {
               key: "actions",
               header: "Actions",
-              width: "140px",
+              width: "220px",
               render: (row) => (
-                <Button variant="secondary" size="sm" onClick={() => openDetail(row)}>
-                  Details
-                </Button>
+                <div className="row gap-sm">
+                  <Button variant="secondary" size="sm" onClick={() => openEditModal(row)}>
+                    Edit
+                  </Button>
+                  <Button variant="danger" size="sm" onClick={() => openDeleteModal(row)}>
+                    Delete
+                  </Button>
+                </div>
               )
             }
           ]}
@@ -265,6 +386,10 @@ export default function CategoriesPage() {
               <div>
                 <div className="muted">Slug</div>
                 <strong>/{safeText(detailCategory.slug)}</strong>
+              </div>
+              <div>
+                <div className="muted">Icon</div>
+                <strong>{safeText(detailCategory.icon) || "None"}</strong>
               </div>
               <div>
                 <div className="muted">Level</div>
@@ -318,6 +443,12 @@ export default function CategoriesPage() {
             ))}
           </Select>
 
+          <IconSelector
+            label="Category Icon (Visual Selector)"
+            value={createForm.icon}
+            onChange={(iconName) => handleCreateChange("icon", iconName)}
+          />
+
           {createStatus ? (
             <div className={`alert ${createStatus.type === "error" ? "alert--danger" : "alert--success"}`}>
               {createStatus.message}
@@ -333,6 +464,74 @@ export default function CategoriesPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal open={editOpen} title={editingId ? "Edit Category" : "Edit category"} onClose={closeEditModal} footer={null}>
+        <form className="stack gap-md" onSubmit={handleUpdateCategory}>
+          <Input label="Name" value={editForm.name} required onChange={(e) => handleEditNameChange(e.target.value)} />
+          <Input label="Slug" value={editForm.slug} required onChange={(e) => handleEditSlugChange(e.target.value)} />
+          <Textarea label="Description" rows={4} value={editForm.description} onChange={(e) => handleEditChange("description", e.target.value)} />
+          <Select label="Visibility" value={editForm.visibility} onChange={(e) => handleEditChange("visibility", e.target.value)}>
+            <option value="public">public</option>
+            <option value="hidden">hidden</option>
+            <option value="draft">draft</option>
+          </Select>
+          <Select label="Parent category" value={editForm.parent_id} onChange={(e) => handleEditChange("parent_id", e.target.value)}>
+            <option value="">None (root)</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </Select>
+
+          <IconSelector
+            label="Category Icon (Visual Selector)"
+            value={editForm.icon}
+            onChange={(iconName) => handleEditChange("icon", iconName)}
+          />
+
+          {editStatus ? (
+            <div className={`alert ${editStatus.type === "error" ? "alert--danger" : "alert--success"}`}>
+              {editStatus.message}
+            </div>
+          ) : null}
+
+          <div className="row rowEnd gap-sm">
+            <Button type="button" variant="secondary" onClick={closeEditModal} disabled={updating}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" loading={updating}>
+              Update category
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={deleteOpen} title="Delete Category" onClose={closeDeleteModal} footer={null}>
+        <div className="stack gap-md">
+          <div>
+            <p>Are you sure you want to delete this category? This action cannot be undone.</p>
+            <p style={{ fontSize: "0.9em", color: "#999", marginTop: "8px" }}>
+              Note: Categories with products or subcategories cannot be deleted.
+            </p>
+          </div>
+
+          {deleteStatus ? (
+            <div className={`alert ${deleteStatus.type === "error" ? "alert--danger" : "alert--success"}`}>
+              {deleteStatus.message}
+            </div>
+          ) : null}
+
+          <div className="row rowEnd gap-sm">
+            <Button type="button" variant="secondary" onClick={closeDeleteModal} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button type="button" variant="danger" loading={deleting} onClick={handleDeleteCategory}>
+              Delete category
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       <Toast

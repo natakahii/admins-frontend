@@ -6,10 +6,16 @@ export const adminApi = {
   },
 
   categories(params) {
-    return api.get("/api/v1/categories", { params }).then((r) => r.data);
+    return api.get("/api/v1/admin/categories", { params }).then((r) => r.data);
   },
   createCategory(payload) {
-    return api.post("/api/v1/categories", payload).then((r) => r.data);
+    return api.post("/api/v1/admin/categories", payload).then((r) => r.data);
+  },
+  updateCategory(categoryId, payload) {
+    return api.patch(`/api/v1/admin/categories/${categoryId}`, payload).then((r) => r.data);
+  },
+  deleteCategory(categoryId) {
+    return api.delete(`/api/v1/admin/categories/${categoryId}`).then((r) => r.data);
   },
 
   users(params) {
