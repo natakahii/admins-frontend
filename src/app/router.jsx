@@ -14,6 +14,7 @@ import SuperAdminLayout from "../features/superAdmin/layout/SuperAdminLayout.jsx
 import AdminDashboardPage from "../features/admin/pages/DashboardPage.jsx";
 import UsersPage from "../features/admin/pages/UsersPage.jsx";
 import VendorsPage from "../features/admin/pages/VendorsPage.jsx";
+import VendorApplicationsPage from "../features/admin/pages/VendorApplicationsPage.jsx";
 import ProductsPage from "../features/admin/pages/ProductsPage.jsx";
 import CategoriesPage from "../features/admin/pages/CategoriesPage.jsx";
 import OrdersPage from "../features/admin/pages/OrdersPage.jsx";
@@ -58,6 +59,7 @@ export const router = createBrowserRouter([
           { path: "dashboard", element: <AdminDashboardPage /> },
           { path: "users", element: <UsersPage /> },
           { path: "vendors", element: <VendorsPage /> },
+          { path: "vendor-applications", element: <VendorApplicationsPage /> },
           { path: "products", element: <ProductsPage /> },
           { path: "categories", element: <CategoriesPage /> },
           { path: "orders", element: <OrdersPage /> },

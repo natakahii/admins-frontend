@@ -38,6 +38,16 @@ export const adminApi = {
     return api.post(`/api/v1/admin/vendors/${vendorId}/verification/review`, payload).then((r) => r.data);
   },
 
+  vendorApplications(params) {
+    return api.get("/api/v1/admin/vendor-applications", { params }).then((r) => r.data);
+  },
+  vendorApplicationDetail(applicationId) {
+    return api.get(`/api/v1/admin/vendor-applications/${applicationId}`).then((r) => r.data);
+  },
+  reviewVendorApplication(applicationId, payload) {
+    return api.patch(`/api/v1/admin/vendor-applications/${applicationId}/status`, payload).then((r) => r.data);
+  },
+
   products(params) {
     return api.get("/api/v1/admin/products", { params }).then((r) => r.data);
   },
