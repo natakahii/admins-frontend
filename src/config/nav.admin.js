@@ -5,6 +5,7 @@ export const adminNav = [
   { label: "Vendor Applications", path: "/app/admin/vendor-applications", icon: "check-circle" },
   { label: "Products", path: "/app/admin/products", icon: "box" },
   { label: "Categories", path: "/app/admin/categories", icon: "layers" },
+  { label: "Attributes", path: "/app/admin/attributes", icon: "sliders" },
   { label: "Orders", path: "/app/admin/orders", icon: "receipt" },
   { label: "Payments", path: "/app/admin/payments", icon: "credit-card" },
   { label: "Escrow", path: "/app/admin/escrow", icon: "shield" },

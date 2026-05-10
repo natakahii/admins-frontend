@@ -100,5 +100,18 @@ export const adminApi = {
 
   analyticsOverview(params) {
     return api.get("/api/v1/admin/analytics/overview", { params }).then((r) => r.data);
+  },
+
+  attributes(params) {
+    return api.get("/api/v1/admin/attributes", { params }).then((r) => r.data);
+  },
+  createAttribute(payload) {
+    return api.post("/api/v1/admin/attributes", payload).then((r) => r.data);
+  },
+  updateAttribute(attributeId, payload) {
+    return api.patch(`/api/v1/admin/attributes/${attributeId}`, payload).then((r) => r.data);
+  },
+  deleteAttribute(attributeId) {
+    return api.delete(`/api/v1/admin/attributes/${attributeId}`).then((r) => r.data);
   }
 };

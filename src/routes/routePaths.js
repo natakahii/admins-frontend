@@ -22,6 +22,7 @@ export const ROUTE_PATHS = Object.freeze({
   ADMIN_USERS: "/app/admin/users",
   ADMIN_VENDORS: "/app/admin/vendors",
   ADMIN_PRODUCTS: "/app/admin/products",
+  ADMIN_ATTRIBUTES: "/app/admin/attributes",
   ADMIN_ORDERS: "/app/admin/orders",
   ADMIN_PAYMENTS: "/app/admin/payments",
   ADMIN_ESCROW: "/app/admin/escrow",
