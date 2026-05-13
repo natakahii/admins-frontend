@@ -10,6 +10,8 @@ export function formatDateTime(value) {
   return d.toLocaleString();
 }
 
+export const formatCurrency = formatTZS;
+
 export function safeText(value) {
   if (value === null || value === undefined || value === "") return "-";
   return String(value);
