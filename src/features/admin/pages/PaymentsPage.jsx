@@ -9,7 +9,7 @@ import { useListResource } from "../../shared/hooks/useListResource.js";
 import { safeText, formatCurrency } from "../../../utils/formatters.js";
 
 const PAYMENT_STATUSES = ["initiated", "pending", "successful", "failed", "expired"];
-const PAYMENT_METHODS = ["mpesa", "airtel_money", "tigo_pesa", "halopesa", "card", "bank_transfer"];
+const PAYMENT_METHODS = ["mpesa", "airtel_money", "halopesa", "mixx_by_yas", "card", "bank_transfer"];
 const PAYOUT_STATUSES = ["pending", "queued", "processing", "completed", "failed", "reversed"];
 const REFUND_STATUSES = ["initiated", "pending", "successful", "failed"];
 
