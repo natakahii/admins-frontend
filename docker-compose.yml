@@ -1,0 +1,11 @@
+services:
+  admin:
+    build:
+      context: .
+      target: runtime
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://api.natakahii.com}
+    image: natakahii-admin-frontend
+    ports:
+      - "3001:80"
+    restart: unless-stopped

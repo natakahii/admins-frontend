@@ -17,6 +17,7 @@ import VendorsPage from "../features/admin/pages/VendorsPage.jsx";
 import VendorApplicationsPage from "../features/admin/pages/VendorApplicationsPage.jsx";
 import ProductsPage from "../features/admin/pages/ProductsPage.jsx";
 import CategoriesPage from "../features/admin/pages/CategoriesPage.jsx";
+import AttributesPage from "../features/admin/pages/AttributesPage.jsx";
 import OrdersPage from "../features/admin/pages/OrdersPage.jsx";
 import PaymentsPage from "../features/admin/pages/PaymentsPage.jsx";
 import EscrowPage from "../features/admin/pages/EscrowPage.jsx";
@@ -62,6 +63,7 @@ export const router = createBrowserRouter([
           { path: "vendor-applications", element: <VendorApplicationsPage /> },
           { path: "products", element: <ProductsPage /> },
           { path: "categories", element: <CategoriesPage /> },
+          { path: "attributes", element: <AttributesPage /> },
           { path: "orders", element: <OrdersPage /> },
           { path: "payments", element: <PaymentsPage /> },
           { path: "escrow", element: <EscrowPage /> },

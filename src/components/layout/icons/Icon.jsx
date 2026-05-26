@@ -4,7 +4,7 @@ import {
   IoStorefront, IoCube, IoReceipt, IoCard, IoShield, IoRefresh,
   IoLogOut, IoCar, IoWarning, IoHelpCircle, IoFlag, IoBarChart,
   IoSettings, IoTrendingUp, IoCash, IoDocument, IoCreate, IoCheckmarkCircle,
-  IoLayers
+  IoLayers, IoOptions
 } from 'react-icons/io5';
 
 const iconComponents = {
@@ -34,7 +34,8 @@ const iconComponents = {
   update: IoCreate,
   verify: IoCheckmarkCircle,
   "check-circle": IoCheckmarkCircle,
-  layers: IoLayers
+  layers: IoLayers,
+  sliders: IoOptions
 };
 
 export default function Icon({ name, size = 20, color }) {
