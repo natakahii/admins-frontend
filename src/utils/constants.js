@@ -5,6 +5,10 @@ export function getAdminRoleFromUser(user) {
   // user.role, user.admin_role, user.user_type
   const u = user?.user || user?.data?.user || user?.data || user;
 
+  if (u?.is_super_admin === true) return "super_admin";
+  if (u?.admin_level === "super_admin") return "super_admin";
+  if (u?.admin_level === "normal_admin") return "normal_admin";
+
   const roles = u?.roles || user?.roles;
   if (Array.isArray(roles) && roles.length > 0) {
     const normalizedRoles = roles

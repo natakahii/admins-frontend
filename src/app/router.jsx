@@ -66,6 +66,14 @@ export const router = createBrowserRouter([
           { path: "attributes", element: <AttributesPage /> },
           { path: "orders", element: <OrdersPage /> },
           { path: "payments", element: <PaymentsPage /> },
+          {
+            path: "subscription-plans",
+            element: (
+              <RoleRoute allow={["super_admin"]}>
+                <SubscriptionPlansPage />
+              </RoleRoute>
+            )
+          },
           { path: "escrow", element: <EscrowPage /> },
           { path: "refunds", element: <RefundsPage /> },
           { path: "shipments", element: <ShipmentsPage /> },

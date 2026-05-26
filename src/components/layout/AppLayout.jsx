@@ -35,10 +35,14 @@ export default function AppLayout() {
   }, [sidebarOpen]);
 
   const nav = useMemo(() => {
-    const base = [...adminNav];
+    const base = adminNav.filter((item) => {
+      if (!item.roles?.length) return true;
+      return item.roles.includes(adminRole);
+    });
+
     if (adminRole === "super_admin") {
       base.push({ label: "— Super Admin —", path: "", icon: "divider" });
-      base.push(...superAdminNav);
+      base.push(...superAdminNav.filter((item) => item.path !== "/app/super/subscription-plans"));
     }
     return base;
   }, [adminRole]);

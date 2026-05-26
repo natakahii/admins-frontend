@@ -1,13 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PageHeader from "../../shared/components/PageHeader.jsx";
 import Card from "../../../components/ui/Card.jsx";
 import Loader from "../../../components/ui/Loader.jsx";
 import Badge from "../../../components/ui/Badge.jsx";
 import Table from "../../../components/ui/Table.jsx";
+import Button from "../../../components/ui/Button.jsx";
 import { adminApi } from "../api/admin.api.js";
 import { formatTZS, safeText } from "../../../utils/formatters.js";
+import { useAuth } from "../../../app/providers/authContext.js";
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+  const { adminRole } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [error, setError] = useState("");
@@ -224,6 +229,31 @@ export default function DashboardPage() {
               </ul>
             </Card>
           </div>
+
+          {adminRole === "super_admin" ? (
+            <Card
+              title="Subscription Controls"
+              subtitle="Manage vendor plan prices, catalog limits, and premium verification access"
+              actions={(
+                <Button variant="secondary" onClick={() => navigate("/app/admin/subscription-plans")}>
+                  Open Plans
+                </Button>
+              )}
+            >
+              <div className="stack gap-md">
+                <div className="metricCard__stat">
+                  <div>
+                    <div className="muted">Seller plan management</div>
+                    <strong>Pricing, limits, features</strong>
+                  </div>
+                  <span className="tag tag--success">Super admin</span>
+                </div>
+                <div className="muted">
+                  Use Subscription Plans to update monthly or yearly prices, free-plan limits, and the premium vendor verification benefits tied to paid plans.
+                </div>
+              </div>
+            </Card>
+          ) : null}
 
           <Card
             title="Recent Orders (placeholder table)"

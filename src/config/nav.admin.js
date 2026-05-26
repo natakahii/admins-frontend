@@ -8,6 +8,7 @@ export const adminNav = [
   { label: "Attributes", path: "/app/admin/attributes", icon: "sliders" },
   { label: "Orders", path: "/app/admin/orders", icon: "receipt" },
   { label: "Payments", path: "/app/admin/payments", icon: "credit-card" },
+  { label: "Subscription Plans", path: "/app/admin/subscription-plans", icon: "badge-dollar-sign", roles: ["super_admin"] },
   { label: "Escrow", path: "/app/admin/escrow", icon: "shield" },
   { label: "Refunds", path: "/app/admin/refunds", icon: "rotate-ccw" },
   { label: "Shipments", path: "/app/admin/shipments", icon: "truck" },
