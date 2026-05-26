@@ -25,8 +25,16 @@ export const superApi = {
     return api.post("/api/v1/admin/super/platform-fees", payload).then((r) => r.data);
   },
 
+  listSubscriptionPlans() {
+    return api.get("/api/v1/admin/super/subscription-plans").then((r) => r.data);
+  },
+
   saveSubscriptionPlan(payload) {
     return api.post("/api/v1/admin/super/subscription-plans", payload).then((r) => r.data);
+  },
+
+  updateSubscriptionPlan(planId, payload) {
+    return api.patch(`/api/v1/admin/super/subscription-plans/${planId}`, payload).then((r) => r.data);
   },
 
   auditLogs(params) {
