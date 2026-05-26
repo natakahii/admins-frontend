@@ -3,7 +3,8 @@ import {
   IoMenu, IoClose, IoGrid, IoNotifications, IoPerson, IoPeople,
   IoStorefront, IoCube, IoReceipt, IoCard, IoShield, IoRefresh,
   IoLogOut, IoCar, IoWarning, IoHelpCircle, IoFlag, IoBarChart,
-  IoSettings, IoTrendingUp, IoCash, IoDocument, IoCreate, IoCheckmarkCircle
+  IoSettings, IoTrendingUp, IoCash, IoDocument, IoCreate, IoCheckmarkCircle,
+  IoLayers
 } from 'react-icons/io5';
 
 const iconComponents = {
@@ -31,7 +32,9 @@ const iconComponents = {
   "badge-dollar-sign": IoCash,
   "scroll-text": IoDocument,
   update: IoCreate,
-  verify: IoCheckmarkCircle
+  verify: IoCheckmarkCircle,
+  "check-circle": IoCheckmarkCircle,
+  layers: IoLayers
 };
 
 export default function Icon({ name, size = 20, color }) {

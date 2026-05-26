@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import PageHeader from "../../shared/components/PageHeader.jsx";
 import Card from "../../../components/ui/Card.jsx";
 import Table from "../../../components/ui/Table.jsx";
@@ -13,6 +13,140 @@ import Textarea from "../../../components/ui/Textarea.jsx";
 import { useListResource } from "../../shared/hooks/useListResource.js";
 import { adminApi } from "../api/admin.api.js";
 import { safeText } from "../../../utils/formatters.js";
+
+function formatFileSize(bytes) {
+  const size = Number(bytes || 0);
+
+  if (!Number.isFinite(size) || size <= 0) return "-";
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function resolveDocumentFilename(application, headers) {
+  const disposition = headers?.["content-disposition"];
+  const matchedFilename = disposition?.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i)?.[1];
+
+  if (matchedFilename) {
+    return decodeURIComponent(matchedFilename);
+  }
+
+  return application?.verification_document_original_name || "vendor-verification-document";
+}
+
+function isImageMime(mimeType) {
+  return typeof mimeType === "string" && mimeType.toLowerCase().startsWith("image/");
+}
+
+function isPdfMime(mimeType) {
+  return typeof mimeType === "string" && mimeType.toLowerCase().includes("pdf");
+}
+
+function InlineDocumentPreview({ preview }) {
+  if (!preview) return null;
+
+  return (
+    <div className="documentPreview">
+      <div className="documentPreview__header">
+        <div>
+          <div className="documentPreview__eyebrow">In-page Viewer</div>
+          <div className="documentPreview__title">{safeText(preview.filename)}</div>
+        </div>
+        <a
+          className="btn btn--secondary btn--sm"
+          href={preview.objectUrl}
+          download={preview.filename}
+        >
+          Download Copy
+        </a>
+      </div>
+
+      <div className="documentPreview__surface">
+        {preview.previewKind === "image" ? (
+          <img
+            className="documentPreview__image"
+            src={preview.objectUrl}
+            alt={preview.filename}
+          />
+        ) : null}
+
+        {preview.previewKind === "pdf" ? (
+          <iframe
+            className="documentPreview__frame"
+            src={preview.objectUrl}
+            title={preview.filename}
+          />
+        ) : null}
+
+        {preview.previewKind === "other" ? (
+          <div className="documentPreview__fallback">
+            <div className="muted">Preview is not available for this file type.</div>
+            <strong>{safeText(preview.contentType)}</strong>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function VerificationDocumentCard({ application, downloading, preview, onOpenDocument }) {
+  if (!application?.has_verification_document) {
+    return (
+      <div className="alert alert--warning">
+        No verification document is attached to this application.
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        border: "1px solid var(--border, rgba(15, 23, 42, 0.12))",
+        borderRadius: "16px",
+        padding: "16px",
+        background: "rgba(248, 250, 252, 0.9)"
+      }}
+    >
+      <div className="rowBetween" style={{ alignItems: "flex-start", gap: "12px", marginBottom: "12px" }}>
+        <div>
+          <div className="muted">Verification Document</div>
+          <strong>{safeText(application.verification_document_type_label)}</strong>
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          loading={downloading}
+          onClick={() => onOpenDocument(application)}
+        >
+          {preview ? "Hide Document" : "View Document"}
+        </Button>
+      </div>
+
+      <div className="grid2 gap-md">
+        <div>
+          <div className="muted">Submitted File</div>
+          <strong>{safeText(application.verification_document_original_name)}</strong>
+        </div>
+        <div>
+          <div className="muted">File Size</div>
+          <strong>{formatFileSize(application.verification_document_size)}</strong>
+        </div>
+        <div>
+          <div className="muted">Format</div>
+          <strong>{safeText(application.verification_document_mime_type)}</strong>
+        </div>
+        <div>
+          <div className="muted">Access</div>
+          <strong>Private admin review</strong>
+        </div>
+      </div>
+
+      <InlineDocumentPreview preview={preview} />
+    </div>
+  );
+}
 
 export default function VendorApplicationsPage() {
   const [search, setSearch] = useState("");
@@ -35,17 +169,29 @@ export default function VendorApplicationsPage() {
   const [reviewDecision, setReviewDecision] = useState("approved");
   const [rejectionReason, setRejectionReason] = useState("");
   const [reviewing, setReviewing] = useState(false);
+  const [downloadingDocumentId, setDownloadingDocumentId] = useState(null);
+  const [documentPreview, setDocumentPreview] = useState(null);
 
   const [toast, setToast] = useState({ open: false, tone: "info", message: "" });
 
   const applications = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 
+  useEffect(() => {
+    return () => {
+      if (documentPreview?.objectUrl) {
+        URL.revokeObjectURL(documentPreview.objectUrl);
+      }
+    };
+  }, [documentPreview]);
+
   function openDetail(app) {
     setSelectedApp(app);
+    setDocumentPreview(null);
     setDetailOpen(true);
   }
 
   function closeDetail() {
+    setDocumentPreview(null);
     setDetailOpen(false);
   }
 
@@ -53,12 +199,55 @@ export default function VendorApplicationsPage() {
     setSelectedApp(app);
     setReviewDecision("approved");
     setRejectionReason("");
+    setDocumentPreview(null);
     setReviewOpen(true);
   }
 
   function closeReview() {
     if (reviewing) return;
+    setDocumentPreview(null);
     setReviewOpen(false);
+  }
+
+  async function handleOpenDocument(application) {
+    if (!application?.has_verification_document) {
+      setToast({
+        open: true,
+        tone: "danger",
+        message: "This application does not have a verification document to open."
+      });
+      return;
+    }
+
+    if (documentPreview?.applicationId === application.id) {
+      setDocumentPreview(null);
+      return;
+    }
+
+    setDownloadingDocumentId(application.id);
+
+    try {
+      const response = await adminApi.downloadVendorApplicationDocument(application);
+      const contentType = response?.headers?.["content-type"] || application.verification_document_mime_type || "application/octet-stream";
+      const fileBlob = response?.data instanceof Blob
+        ? response.data
+        : new Blob([response?.data], { type: contentType });
+      const objectUrl = URL.createObjectURL(fileBlob);
+      const filename = resolveDocumentFilename(application, response?.headers);
+
+      setDocumentPreview({
+        applicationId: application.id,
+        filename,
+        objectUrl,
+        contentType,
+        previewKind: isImageMime(contentType) ? "image" : isPdfMime(contentType) ? "pdf" : "other"
+      });
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || "Failed to open the verification document.";
+      setToast({ open: true, tone: "danger", message });
+    } finally {
+      setDownloadingDocumentId(null);
+    }
   }
 
   async function handleReview() {
@@ -171,6 +360,23 @@ export default function VendorApplicationsPage() {
               )
             },
             {
+              key: "verification_document",
+              header: "Verification",
+              width: "220px",
+              render: (row) => (
+                row.has_verification_document ? (
+                  <div>
+                    <strong>{safeText(row.verification_document_type_label)}</strong>
+                    <div className="muted" style={{ fontSize: "0.85em" }}>
+                      {safeText(row.verification_document_original_name)}
+                    </div>
+                  </div>
+                ) : (
+                  <Badge tone="danger">Missing document</Badge>
+                )
+              )
+            },
+            {
               key: "status",
               header: "Status",
               width: "120px",
@@ -228,6 +434,7 @@ export default function VendorApplicationsPage() {
         open={detailOpen} 
         title={selectedApp ? `Application — ${selectedApp.business_name}` : "Application details"} 
         onClose={closeDetail} 
+        className="vendorApplicationModal"
         footer={null}
       >
         {selectedApp ? (
@@ -263,7 +470,7 @@ export default function VendorApplicationsPage() {
 
             <div>
               <div className="muted">Description</div>
-              <p>{safeText(selectedApp.description) || "No description provided"}</p>
+              <p>{selectedApp.description ? safeText(selectedApp.description) : "No description provided"}</p>
             </div>
 
             <div className="grid3 gap-md">
@@ -293,6 +500,18 @@ export default function VendorApplicationsPage() {
               <div className="muted">Applicant Email</div>
               <strong>{safeText(selectedApp.user?.email)}</strong>
             </div>
+
+            <div>
+              <div className="muted" style={{ marginBottom: "8px" }}>Subscription Plan</div>
+              <strong>{safeText(selectedApp.subscriptionPlan?.name || selectedApp.subscription_plan)}</strong>
+            </div>
+
+            <VerificationDocumentCard
+              application={selectedApp}
+              downloading={downloadingDocumentId === selectedApp.id}
+              preview={documentPreview?.applicationId === selectedApp.id ? documentPreview : null}
+              onOpenDocument={handleOpenDocument}
+            />
 
             {selectedApp.status === "rejected" && selectedApp.rejection_reason && (
               <div className="alert alert--warning">
@@ -329,6 +548,7 @@ export default function VendorApplicationsPage() {
         open={reviewOpen} 
         title={selectedApp ? `Review — ${selectedApp.business_name}` : "Review application"} 
         onClose={closeReview}
+        className="vendorApplicationModal"
         footer={null}
       >
         {selectedApp ? (
@@ -347,6 +567,13 @@ export default function VendorApplicationsPage() {
                 <p style={{ margin: "4px 0" }}>{safeText(selectedApp.region)}, {safeText(selectedApp.city)}</p>
               </div>
             </div>
+
+            <VerificationDocumentCard
+              application={selectedApp}
+              downloading={downloadingDocumentId === selectedApp.id}
+              preview={documentPreview?.applicationId === selectedApp.id ? documentPreview : null}
+              onOpenDocument={handleOpenDocument}
+            />
 
             <div>
               <label>Decision *</label>

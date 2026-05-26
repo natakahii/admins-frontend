@@ -12,7 +12,7 @@ export default function QueryProvider({ children }) {
       defaultOptions: {
         queries: {
           staleTime: 30_000,              // 30s
-          cacheTime: 5 * 60_000,          // 5 min
+          gcTime: 5 * 60_000,             // 5 min (renamed from cacheTime in v5)
           refetchOnWindowFocus: false,
           refetchOnReconnect: true,
           retry: (failureCount, error) => {

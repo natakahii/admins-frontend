@@ -44,6 +44,22 @@ export const adminApi = {
   vendorApplicationDetail(applicationId) {
     return api.get(`/api/v1/admin/vendor-applications/${applicationId}`).then((r) => r.data);
   },
+  downloadVendorApplicationDocument(application) {
+    const fallbackUrl = `/api/v1/vendor-applications/${application?.id}/document`;
+    const rawUrl = application?.verification_document_download_url || fallbackUrl;
+    let requestUrl = rawUrl;
+
+    if (typeof rawUrl === "string" && /^https?:\/\//i.test(rawUrl)) {
+      try {
+        const parsedUrl = new URL(rawUrl);
+        requestUrl = `${parsedUrl.pathname}${parsedUrl.search}`;
+      } catch {
+        requestUrl = fallbackUrl;
+      }
+    }
+
+    return api.get(requestUrl, { responseType: "blob" });
+  },
   reviewVendorApplication(applicationId, payload) {
     return api.patch(`/api/v1/admin/vendor-applications/${applicationId}/status`, payload).then((r) => r.data);
   },
